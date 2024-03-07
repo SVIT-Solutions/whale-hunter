@@ -1,0 +1,16 @@
+version: "3"
+
+services:
+  server:
+    container_name: server-whale-hunter
+    build: ./server
+    ports:
+      - "$SERVER_PORT:$SERVER_PORT"
+    command: bash -c "python manage.py runserver 0.0.0.0:$SERVER_PORT"
+    working_dir: /var/www/server
+    volumes:
+      - ./server:/var/www/server
+    environment:
+      - DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE
+    env_file:
+      - .env
