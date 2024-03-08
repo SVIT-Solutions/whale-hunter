@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'accounts',
+
     'api',
     'eth'
 ]
@@ -129,6 +131,9 @@ STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Custom User model
+AUTH_USER_MODEL = "accounts.User"
 
 # API keys
 COINMARKETCAP_API_KEY = config('COINMARKETCAP_API_KEY')
