@@ -4,7 +4,7 @@ from .functions import *
 from .utils import *
 
 
-def get_wallet_balance(request):
+def get_wallet_data(request):
     wallet_address = request.GET.get('wallet_address')
 
     if not is_valid_ethereum_address(wallet_address):
@@ -19,7 +19,12 @@ def get_wallet_balance(request):
         latest_block = 999999999
         warnings.append({"place": "latest_block", "message": "Failed to get the latest block number"})
 
-    token_balances, token_balances_error = fetch_token_balance(wallet_address, latest_block, api_key)
+    transactions, transactions_error = fetch_wallet_transactions(wallet_address, api_key, latest_block)
+
+    if transactions is None:
+        return JsonResponse({'success': False, 'error': transactions_error})
+
+    token_balances, token_balances_error = calculate_token_balances(transactions, wallet_address)
 
     if token_balances is None:
         return JsonResponse({'success': False, 'error': token_balances_error})
@@ -27,6 +32,7 @@ def get_wallet_balance(request):
     response_data = {
         "success": True,
         "token_balances": token_balances,
+        "transactions": transactions,
         "warnings": warnings
     }
 
