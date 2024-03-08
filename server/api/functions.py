@@ -1,11 +1,13 @@
 import requests
-from django.conf import settings
 
 # Coinmarketcap API
-def fetch_token_price_value(token_symbol, convert_symbol):
+def fetch_token_price_value(token_symbol=None, convert_symbol=None, api_key=None):
+    if token_symbol is None or convert_symbol is None or api_key is None:
+        return None
+
     headers = {
         'Accepts': 'application/json',
-        'X-CMC_PRO_API_KEY': settings.COINMARKETCAP_API_KEY,
+        'X-CMC_PRO_API_KEY': api_key,
     }
     url = f'https://pro-api.coinmarketcap.com/v1/tools/price-conversion?amount=1&symbol={token_symbol.upper()}&convert={convert_symbol.upper()}'
 
@@ -23,10 +25,13 @@ def fetch_token_price_value(token_symbol, convert_symbol):
         return None
 
 
-def fetch_token_image_url(token_symbol):
+def fetch_token_image_url(token_symbol=None, api_key=None):
+    if token_symbol is None or api_key is None:
+        return None
+
     headers = {
         'Accepts': 'application/json',
-        'X-CMC_PRO_API_KEY': settings.COINMARKETCAP_API_KEY,
+        'X-CMC_PRO_API_KEY': api_key,
     }
     url = f'https://pro-api.coinmarketcap.com/v1/cryptocurrency/info?symbol={token_symbol.upper()}'
 

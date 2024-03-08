@@ -2,7 +2,10 @@ import requests
 
 
 # Etherscan API
-def fetch_latest_block_number(api_key):
+def fetch_latest_block_number(api_key=None):
+    if api_key is None:
+        return None
+
     try:
         url = f'https://api.etherscan.io/api?module=proxy&action=eth_blockNumber&apikey={api_key}'
 
@@ -17,7 +20,10 @@ def fetch_latest_block_number(api_key):
         return None
 
 
-def fetch_wallet_transactions(wallet_address, api_key, endblock=999999999):
+def fetch_wallet_transactions(wallet_address=None, api_key=None, endblock=999999999):
+    if wallet_address is None or api_key is None:
+        return None, 'Wallet address or API key not provided.'
+
     url = f'https://api.etherscan.io/api?module=account&action=tokentx&address={wallet_address}&startblock=0&endblock={endblock}&sort=asc&apikey={api_key}'
 
     try:

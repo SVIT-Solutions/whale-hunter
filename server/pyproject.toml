@@ -8,6 +8,8 @@ authors = ["Belphin <findolph0003@gmail.com>"]
 python = "^3.10"
 Django = "^4.2.5"
 python-decouple = "^3.8"
+djangorestframework = "^3.14.0"
+djangorestframework-simplejwt = "^5.3.1"
 
 [tool.poetry.dev-dependencies]
 

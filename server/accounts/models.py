@@ -25,3 +25,6 @@ class UserAPIKeys(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     coinmarketcap_api_key = models.CharField(max_length=100)
     etherscan_api_key = models.CharField(max_length=100)
+    
+    def __str__(self):
+        return self.user.email
