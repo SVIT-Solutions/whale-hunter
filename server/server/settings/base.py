@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'accounts',
 
     'api',
-    'eth'
+    'blockchains.eth'
 ]
 
 MIDDLEWARE = [
