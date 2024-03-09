@@ -14,3 +14,17 @@ services:
       - DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE
     env_file:
       - .env
+
+  client:
+    container_name: client-whale-hunter
+    build:
+      context: ./client
+      dockerfile: docker/development/Dockerfile
+    working_dir: /var/www/client
+    ports:
+      - "$CLIENT_PORT:$CLIENT_PORT"
+    volumes:
+      - ./client:/var/www/client
+      - ./server:/var/www/server
+    environment:
+      - SEVER_API_URL=${SEVER_API_URL}

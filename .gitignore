@@ -8,3 +8,6 @@ __pycache__/
 *.log
 
 .env
+
+client/node_modules/
+client/.next/
