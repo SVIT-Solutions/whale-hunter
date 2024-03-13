@@ -40,8 +40,8 @@ def fetch_wallet_transactions(wallet_address=None, api_key=None, endblock=999999
         return None, str(e)
 
 
-def calculate_token_balances(transactions, wallet_address):
-    token_balances = {}
+def calculate_token_balances(transactions):
+    token_balances_dict = {}
 
     for tx in transactions:
         token_contract_address = tx.get('contractAddress', '')
@@ -50,11 +50,32 @@ def calculate_token_balances(transactions, wallet_address):
         token_symbol = tx.get('tokenSymbol', '')
 
         if token_contract_address:
-            if token_contract_address not in token_balances:
-                token_balances[token_contract_address] = {'name': token_name, "symbol": token_symbol, 'balance': 0}
-            token_balances[token_contract_address]['balance'] += token_balance
+            if token_contract_address not in token_balances_dict:
+                token_balances_dict[token_contract_address] = {'name': token_name, "symbol": token_symbol, 'balance': 0}
+            token_balances_dict[token_contract_address]['balance'] += token_balance
+
+    token_balances = []
+
+    for address, data in token_balances_dict.items():
+        token_balance_data = {
+            'token_contract_address': address,
+            'name': data['name'],
+            'symbol': data['symbol'],
+            'balance': data['balance']
+        }
+        token_balances.append(token_balance_data)
 
     if token_balances:
         return token_balances, None
     else:
         return None, 'Failed to get token balances'
+
+def format_transactions_data(transactions):
+    return [{
+        'from_address': transaction.get('from'),
+        'to_address': transaction.get('to'),
+        'value': transaction.get('value'),
+        'tokenSymbol': transaction.get('tokenSymbol'),
+        'tokenName': transaction.get('tokenName'),
+        'timeStamp': transaction.get('timeStamp')
+    } for transaction in transactions]

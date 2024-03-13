@@ -3,7 +3,7 @@
 const nextConfig = {
   reactStrictMode: false,
   devIndicators: false,
-  env: { SERVER_API_URL: process.env.SERVER_API_URL },
+  env: { REACT_APP_GRAPHQL_ENDPOINT: process.env.REACT_APP_GRAPHQL_ENDPOINT },
   publicRuntimeConfig: {
     manifestPath: '/manifest.json',
   },

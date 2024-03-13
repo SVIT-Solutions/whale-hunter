@@ -8,6 +8,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=True)
+    verification_token = models.CharField(max_length=255, blank=True, null=True, unique=True)
+    password_change_token = models.CharField(max_length=255, blank=True, null=True, unique=True)
 
     objects = UserManager()
 

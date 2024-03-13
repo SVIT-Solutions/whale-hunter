@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 from pathlib import Path
 from decouple import config
 import datetime
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,6 +34,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'accounts',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -40,13 +43,15 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    'rest_framework',
-    'rest_framework.authtoken',
-
-    'accounts',
+    'graphene_django',
+    'serious_django_graphene',
+    'corsheaders',
+    'babel',
 
     'api',
-    'blockchains.eth'
+    'blockchains.eth',
+
+    'permissions',
 ]
 
 MIDDLEWARE = [
@@ -57,6 +62,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'server.middleware.SetLanguageMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'permissions.middleware.AllowedDomainMiddleware',
 ]
 
 ROOT_URLCONF = 'server.urls'
@@ -134,25 +143,73 @@ STATIC_URL = '/static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Auth token settings
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+
+# Graphene Schema
+GRAPHENE = {
+    "SCHEMA": "server.schema.schema",  # Where your Graphene schema lives
+    "MIDDLEWARE": [
+        "graphql_jwt.middleware.JSONWebTokenMiddleware",
     ],
 }
 
-SIMPLE_JWT = {
-    "SIGNING_KEY": SECRET_KEY,
-    "ACCESS_TOKEN_LIFETIME": datetime.timedelta(days=7),
-    "REFRESH_TOKEN_LIFETIME": datetime.timedelta(days=30),
-    "BLACKLIST_AFTER_ROTATION": True,
+
+# Auth token settings
+JWT_EXPIRATION_DELTA = datetime.timedelta(days=1)
+JWT_ALGORITHM = "HS256"
+
+AUTHENTICATION_BACKENDS = [
+    "graphql_jwt.backends.JSONWebTokenBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+GRAPHQL_JWT = {
+    "JWT_EXPIRATION_DELTA": datetime.timedelta(hours=12),
+    "JWT_REFRESH_EXPIRATION_DELTA": datetime.timedelta(days=7),
+    "JWT_AUTH_HEADER_PREFIX": "Bearer",
 }
 
 CORS_ALLOW_ALL_ORIGINS = True
 
+CLIENT_URL = config('CLIENT_URL')
+
 # Custom User model
 AUTH_USER_MODEL = "accounts.User"
+
 
 # API keys
 COINMARKETCAP_API_KEY = config('COINMARKETCAP_API_KEY')
 ETHERSCAN_API_KEY = config('ETHERSCAN_API_KEY')
+
+
+# Localization
+LANGUAGE_CODE = 'en-us'
+USE_I18N = True
+USE_L10N = True
+USE_TZ = True
+
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale'),
+]
+
+
+# Email
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+SUPPORT_EMAIL = config('SUPPORT_EMAIL')
+
+
+# Celery
+REDIS_PORT = config('REDIS_PORT')
+
+CELERY_BROKER_URL = f'redis://redis:{REDIS_PORT}/0'
+CELERY_RESULT_BACKEND = f'redis://redis:{REDIS_PORT}/0'
+
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
