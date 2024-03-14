@@ -1,6 +1,18 @@
 import requests
 
 
+def check_address_validity(wallet_address):
+    if len(wallet_address) != 42:
+        return False
+    if not wallet_address.startswith('0x'):
+        return False
+    try:
+        int(wallet_address, 16)
+    except ValueError:
+        return False
+    return True
+
+
 # Etherscan API
 def fetch_latest_block_number(api_key=None):
     if api_key is None:

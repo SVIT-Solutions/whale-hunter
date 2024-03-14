@@ -4,11 +4,10 @@ import graphql_jwt
 import accounts.mutations as ac_mutation
 
 from accounts.schema import Query as AccountsQuery
-from blockchains.eth.schema import Query as ETHQuery
 from api.schema import Query as APIQuery
 
 
-class Query(AccountsQuery, ETHQuery, APIQuery, graphene.ObjectType):pass
+class Query(AccountsQuery, APIQuery, graphene.ObjectType):pass
 
 class Mutation(graphene.ObjectType):
     token_auth = graphql_jwt.ObtainJSONWebToken.Field()

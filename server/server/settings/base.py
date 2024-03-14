@@ -49,7 +49,6 @@ INSTALLED_APPS = [
     'babel',
 
     'api',
-    'blockchains.eth',
 
     'permissions',
 ]
