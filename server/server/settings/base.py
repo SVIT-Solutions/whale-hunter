@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'babel',
 
+    'blockchains',
     'api',
 
     'permissions',

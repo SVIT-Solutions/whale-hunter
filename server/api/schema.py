@@ -1,8 +1,18 @@
 import graphene
 from django.shortcuts import get_object_or_404
-from accounts.models import UserAPIKeys
 from graphql import GraphQLError
+from django.core.exceptions import ObjectDoesNotExist
+from graphene_django.types import DjangoObjectType
+from django.utils.translation import gettext_lazy as _
+
+from accounts.models import UserAPIKeys
+from blockchains.models import Network
 from .functions import fetch_token_price_value, fetch_token_image_url
+
+
+class NetworkType(DjangoObjectType):
+    class Meta:
+        model = Network
 
 
 # Wallet Types
@@ -39,6 +49,7 @@ class TokenPriceType(graphene.ObjectType):
 
 
 class Query(graphene.ObjectType):
+    networks = graphene.List(NetworkType)
     wallet = graphene.Field(
         WalletType,
         wallet_address=graphene.String(required=True),
@@ -58,6 +69,10 @@ class Query(graphene.ObjectType):
     )
 
 
+    def resolve_networks(self, info):
+        return Network.objects.all()
+
+
     def resolve_wallet(self, info, wallet_address, network):
         user = info.context.user
         if not user.is_authenticated:
@@ -74,11 +89,15 @@ class Query(graphene.ObjectType):
 
         warnings = []
 
-        # Dynamic Import of Functions Based on Network
+        # Checking if the network is supported or correct
         try:
-            functions_module = __import__(f"blockchains_functions.{network}", fromlist=["*"])
+            network = network.lower()
+            Network.objects.get(abbreviation__iexact=network)
+            functions_module = __import__(f"blockchains.functions.{network}", fromlist=["*"])
         except ImportError:
-            raise GraphQLError(f"Could not import functions module for network {network}")
+            raise GraphQLError(f"Network {network} temporarily unavailable")
+        except ObjectDoesNotExist:
+            raise GraphQLError(f"Network {network} not supported")
 
         # Checking the validity of the wallet address 
         validate_address_function = getattr(functions_module, 'check_address_validity')
