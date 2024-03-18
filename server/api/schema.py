@@ -1,51 +1,13 @@
 import graphene
 from django.shortcuts import get_object_or_404
 from graphql import GraphQLError
-from django.core.exceptions import ObjectDoesNotExist
 from graphene_django.types import DjangoObjectType
 from django.utils.translation import gettext_lazy as _
 
-from accounts.models import UserAPIKeys
 from blockchains.models import Network
-from .functions import fetch_token_price_value, fetch_token_image_url
-
-
-class NetworkType(DjangoObjectType):
-    class Meta:
-        model = Network
-
-
-# Wallet Types
-class TokenBalance(graphene.ObjectType):
-    name = graphene.String()
-    symbol = graphene.String()
-    balance = graphene.Float()
-    contract_address = graphene.String()
-
-class Transaction(graphene.ObjectType):
-    from_address = graphene.String()
-    to_address = graphene.String()
-    value = graphene.String()
-    tokenSymbol = graphene.String()
-    tokenName = graphene.String()
-    timeStamp = graphene.String()
-
-class WalletType(graphene.ObjectType):
-    success = graphene.Boolean()
-    token_balances = graphene.List(TokenBalance)
-    transactions = graphene.List(Transaction)
-    warnings = graphene.List(graphene.String)
-
-
-# Types for Coinmarketcap API Queries
-class TokenImageType(graphene.ObjectType):
-    success = graphene.Boolean()
-    image_url = graphene.String()
-
-class TokenPriceType(graphene.ObjectType):
-    success = graphene.Boolean()
-    convert_symbol = graphene.String()
-    token_price = graphene.String()
+from .utils import create_error_response
+from .functions import fetch_token_price_value, fetch_token_image_url, get_api_key, get_functions_module, check_authenticated
+from .types import *
 
 
 class Query(graphene.ObjectType):
@@ -74,30 +36,23 @@ class Query(graphene.ObjectType):
 
 
     def resolve_wallet(self, info, wallet_address, network):
+        # Check Authenticated
         user = info.context.user
-        if not user.is_authenticated:
-            raise GraphQLError('User is not authenticated')
+        is_authenticated, authenticated_error = check_authenticated(user)
+        if not is_authenticated:
+            return create_error_response(message=authenticated_error, place="auth")
 
-        try:
-            user_api_keys = UserAPIKeys.objects.get(user=user)
-            api_key = user_api_keys.etherscan_api_key
-        except:
-            raise GraphQLError('API Key not specified')
-
+        # Get Etherscan API Key
+        api_key, api_key_error = get_api_key(user=user, key="etherscan_api_key")
         if not api_key:
-            raise GraphQLError('API Key not specified')
+            return create_error_response(message=api_key_error, place="api_key")
 
         warnings = []
 
         # Checking if the network is supported or correct
-        try:
-            network = network.lower()
-            Network.objects.get(abbreviation__iexact=network)
-            functions_module = __import__(f"blockchains.functions.{network}", fromlist=["*"])
-        except ImportError:
-            raise GraphQLError(f"Network {network} temporarily unavailable")
-        except ObjectDoesNotExist:
-            raise GraphQLError(f"Network {network} not supported")
+        functions_module, functions_module_error = get_functions_module(network)
+        if functions_module is None:
+            return create_error_response(message=functions_module_error, place="network")
 
         # Checking the validity of the wallet address 
         validate_address_function = getattr(functions_module, 'check_address_validity')
@@ -141,33 +96,52 @@ class Query(graphene.ObjectType):
     def resolve_token_price(self, info, token_symbol, convert_symbol):
         success = False
         user = info.context.user
-        user_api_keys = get_object_or_404(UserAPIKeys, user=user)
-        api_key = user_api_keys.coinmarketcap_api_key
+
+        if not token_symbol:
+            return create_error_response(message='Token symbol not provided', place='token_symbol')
+
+        # Check Authenticated
+        user = info.context.user
+        is_authenticated, authenticated_error = check_authenticated(user)
+        if not is_authenticated:
+            return create_error_response(message=authenticated_error, place="auth")
+
+        # Get Coinmarketcap API Key
+        api_key, api_key_error = get_api_key(user=user, key="coinmarketcap_api_key")
+        if not api_key:
+            return create_error_response(message=api_key_error, place="api_key")
 
         token_price = fetch_token_price_value(token_symbol=token_symbol, convert_symbol=convert_symbol, api_key=api_key)
 
-        if token_price is not None:
-            success = True
+        if token_price is None:
+            return create_error_response(message='Could not find the token price', place='token_price')
 
-        return {'success': success, 'token_price': token_price, 'convert_symbol': convert_symbol}
+        return {'success': True, 'token_price': token_price}
 
 
     def resolve_token_image(self, info, token_symbol):
-        success = False
         user = info.context.user
-        user_api_keys = get_object_or_404(UserAPIKeys, user=user)
-        api_key = user_api_keys.coinmarketcap_api_key
 
         if not token_symbol:
-            raise GraphQLError('Token symbol not provided')
+            return create_error_response(message='Token symbol not provided', place='token_symbol')
+
+        # Check Authenticated
+        user = info.context.user
+        is_authenticated, authenticated_error = check_authenticated(user)
+        if not is_authenticated:
+            return create_error_response(message=authenticated_error, place="auth")
+
+        # Get Coinmarketcap API Key
+        api_key, api_key_error = get_api_key(user=user, key="coinmarketcap_api_key")
+        if not api_key:
+            return create_error_response(message=api_key_error, place="api_key")
 
         image_url = fetch_token_image_url(token_symbol=token_symbol, api_key=api_key)
 
-        if image_url:
-            success = True
-        else:
-            raise GraphQLError('Failed to fetch token image')
+        if not image_url:
+            return create_error_response(message='Failed to fetch token image', place='image_url')
 
-        return {"success": success, "image_url": image_url}
+        return {"success": True, "image_url": image_url}
+
 
 schema = graphene.Schema(query=Query)
