@@ -47,8 +47,6 @@ class Query(graphene.ObjectType):
         if not api_key:
             return create_error_response(message=api_key_error, place="api_key")
 
-        warnings = []
-
         # Add functions class for current network
         functions_class_module, functions_class_module_error = get_functions_module(folder="functions_classes", network=network)
         if functions_class_module_error:
@@ -86,7 +84,6 @@ class Query(graphene.ObjectType):
             "success": True,
             "token_balances": token_balances,
             "transactions": formated_transactions,
-            "warnings": warnings
         }
 
         return response_data

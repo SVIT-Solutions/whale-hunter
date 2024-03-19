@@ -1,11 +1,11 @@
 import requests
-import datetime
 from urllib.parse import urlencode
 
 
 class Functions:
     def __init__(self, api_key):
         self.api_key = api_key
+
 
     @staticmethod
     def check_address_validity(wallet_address):
@@ -16,6 +16,7 @@ class Functions:
         except ValueError:
             return False
         return True
+
 
     def fetch_transactions(self, params):
         if params is None:
@@ -36,6 +37,7 @@ class Functions:
                 return None, None, f'Failed to fetch data from Etherscan API. Status code: {response.status_code}'
         except Exception as e:
             return None, None, str(e)
+
 
     @staticmethod
     def calculate_token_balances(transactions):
@@ -63,6 +65,7 @@ class Functions:
             return token_balances, None
         else:
             return None, 'Failed to get token balances'
+
 
     @staticmethod
     def format_transactions_data(transactions):

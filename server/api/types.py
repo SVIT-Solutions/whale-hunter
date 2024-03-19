@@ -34,7 +34,6 @@ class WalletType(graphene.ObjectType):
     error = graphene.Field(ErrorType)
     token_balances = graphene.List(TokenBalance)
     transactions = graphene.List(TransactionType)
-    warnings = graphene.List(graphene.String)
 
 
 # Types for Coinmarketcap API Queries
