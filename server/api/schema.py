@@ -49,39 +49,47 @@ class Query(graphene.ObjectType):
 
         warnings = []
 
-        # Checking if the network is supported or correct
-        functions_module, functions_module_error = get_functions_module(network)
-        if functions_module is None:
-            return create_error_response(message=functions_module_error, place="network")
+        # Add functions class for current network
+        functions_class_module, functions_class_module_error = get_functions_module(folder="functions_classes", network=network)
+        if functions_class_module_error:
+            return create_error_response(message=functions_class_module_error, place="network")
+        FunctionsClass = getattr(functions_class_module, 'Functions')
+        functions_instance = FunctionsClass(api_key)
+
+        # Add requests params class for current network
+        params_class_module, params_class_module_error = get_functions_module(folder="params", network=network)
+        if params_class_module_error:
+            return create_error_response(message=params_class_module_error, place="network")
+        ParamsClass = getattr(params_class_module, 'Params')
+        params_instance = ParamsClass(api_key)
 
         # Checking the validity of the wallet address 
-        validate_address_function = getattr(functions_module, 'check_address_validity')
-        is_address_valid = validate_address_function(wallet_address)
+        is_address_valid = functions_instance.check_address_validity(wallet_address)
         if not is_address_valid:
-            raise GraphQLError(f"The provided address '{wallet_address}' is not valid.")
+            return create_error_response(message="The provided address '{wallet_address}' is not valid.", place="wallet_address")
 
         # Getting the Last Block
-        latest_block_function = getattr(functions_module, 'fetch_latest_block_number')
-        latest_block = latest_block_function(api_key=api_key)
+        latest_block = functions_instance.fetch_latest_block_number()
         if latest_block is None:
             latest_block = 999999999
             warnings.append("Failed to get the latest block number")
 
         # Receiving Transactions
-        fetch_transactions_function = getattr(functions_module, 'fetch_wallet_transactions')
-        transactions, transactions_error = fetch_transactions_function(wallet_address=wallet_address, api_key=api_key, endblock=latest_block)
+        fethc_wallet_transactins_params = params_instance.get_fetch_wallet_transactions_params(
+            wallet_address=wallet_address, 
+            latest_block=latest_block
+        )
+        transactions, transactions_error = functions_instance.fetch_transactions(fethc_wallet_transactins_params)
         if transactions is None:
-            raise GraphQLError(transactions_error)
+           return create_error_response(message=transactions_error, place='transactions')
 
         # Calculating Token Balances
-        calculate_balances_function = getattr(functions_module, 'calculate_token_balances')
-        token_balances, token_balances_error = calculate_balances_function(transactions)
+        token_balances, token_balances_error = functions_instance.calculate_token_balances(transactions)
         if token_balances is None:
-            raise GraphQLError(token_balances_error)
+            return create_error_response(message=token_balances_error, place='token_balances')
 
         # Formatting Transaction Data
-        format_transactions_function = getattr(functions_module, 'format_transactions_data')
-        formated_transactions = format_transactions_function(transactions)
+        formated_transactions = functions_instance.format_transactions_data(transactions)
 
         response_data = {
             "success": True,

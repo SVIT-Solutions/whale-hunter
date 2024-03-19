@@ -73,11 +73,11 @@ def get_api_key(user, key):
     return api_key, None
 
 
-def get_functions_module(network):
+def get_functions_module(folder=None, network=None):
     try:
         network = network.lower()
         Network.objects.get(abbreviation__iexact=network)
-        functions_module = __import__(f"blockchains.functions.{network}", fromlist=["*"])
+        functions_module = __import__(f"blockchains.{folder}.{network}", fromlist=["*"])
         return functions_module, None
     except ImportError:
         return None, f"Network {network} temporarily unavailable"
