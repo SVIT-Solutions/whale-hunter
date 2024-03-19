@@ -17,21 +17,9 @@ class Functions:
             return False
         return True
 
-    def fetch_latest_block_number(self):
-        url = f'https://api.etherscan.io/api?module=proxy&action=eth_blockNumber&apikey={self.api_key}'
-        try:
-            response = requests.get(url)
-            if response.status_code == 200:
-                latest_block_number = int(response.json()['result'], 16)
-                return latest_block_number
-            else:
-                return None
-        except Exception as e:
-            return None
-
     def fetch_transactions(self, params):
         if params is None:
-            return None, 'Request params not provided'
+            return None, None, 'Request params not provided'
 
         params_encoded = urlencode(params)
         url = f'https://api.etherscan.io/api?{params_encoded}'
@@ -43,11 +31,11 @@ class Functions:
                 if 'result' in data:
                     return data['result'], None
                 else:
-                    return None, 'No transaction data found in the response'
+                    return None, None, 'No transaction data found in the response'
             else:
-                return None, f'Failed to fetch data from Etherscan API. Status code: {response.status_code}'
+                return None, None, f'Failed to fetch data from Etherscan API. Status code: {response.status_code}'
         except Exception as e:
-            return None, str(e)
+            return None, None, str(e)
 
     @staticmethod
     def calculate_token_balances(transactions):

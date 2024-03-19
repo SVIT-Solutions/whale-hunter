@@ -57,7 +57,7 @@ class Query(graphene.ObjectType):
         functions_instance = FunctionsClass(api_key)
 
         # Add requests params class for current network
-        params_class_module, params_class_module_error = get_functions_module(folder="params", network=network)
+        params_class_module, params_class_module_error = get_functions_module(folder="requests_params", network=network)
         if params_class_module_error:
             return create_error_response(message=params_class_module_error, place="network")
         ParamsClass = getattr(params_class_module, 'Params')
@@ -68,18 +68,9 @@ class Query(graphene.ObjectType):
         if not is_address_valid:
             return create_error_response(message="The provided address '{wallet_address}' is not valid.", place="wallet_address")
 
-        # Getting the Last Block
-        latest_block = functions_instance.fetch_latest_block_number()
-        if latest_block is None:
-            latest_block = 999999999
-            warnings.append("Failed to get the latest block number")
-
         # Receiving Transactions
-        fethc_wallet_transactins_params = params_instance.get_fetch_wallet_transactions_params(
-            wallet_address=wallet_address, 
-            latest_block=latest_block
-        )
-        transactions, transactions_error = functions_instance.fetch_transactions(fethc_wallet_transactins_params)
+        fetch_wallet_transactins_params = params_instance.get_fetch_wallet_transactions_params(wallet_address=wallet_address)
+        transactions, transactions_error = functions_instance.fetch_transactions(fetch_wallet_transactins_params)
         if transactions is None:
            return create_error_response(message=transactions_error, place='transactions')
 
