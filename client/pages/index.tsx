@@ -1,4 +1,4 @@
-import HomeLayout from 'components/HomeLayout';
+import HomeLayout from '@/components/layouts/HomeLayout';
 
 const Home = () => {
   return <HomeLayout />;

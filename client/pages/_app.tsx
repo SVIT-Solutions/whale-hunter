@@ -1,7 +1,10 @@
-import { defaultTheme } from '@/assets/styles/theme';
+import React from 'react';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import { AppProps } from 'next/app';
-import React from 'react';
+import { Provider } from 'react-redux';
+
+import store from '@/redux/store';
+import { defaultTheme } from '@/assets/styles/theme';
 
 export default function App({ Component, pageProps }: AppProps) {
   React.useEffect(() => {
@@ -14,7 +17,9 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <ThemeProvider theme={defaultTheme}>
       <CssBaseline />
-      <Component {...pageProps} />
+      <Provider store={store}>
+        <Component {...pageProps} />
+      </Provider>
     </ThemeProvider>
   );
 }
