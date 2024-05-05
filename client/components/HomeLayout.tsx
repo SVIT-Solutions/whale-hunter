@@ -7,9 +7,7 @@ interface Props {
 }
 
 const useStyles = makeStyles({
-  card: {
-    height: '1000px',
-  },
+  card: {},
 });
 
 const HomeLayout = ({ children }: Props) => {
