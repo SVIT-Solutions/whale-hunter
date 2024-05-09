@@ -5,9 +5,10 @@ import React, { FC } from 'react';
 
 export interface SearchRootProps extends TextFieldProps {
   disabled?: boolean;
+  onSearch: (query: string) => void;
 }
 
-const SearchRoot: FC<SearchRootProps> = ({ disabled, ...textFieldProps }) => {
+const SearchRoot: FC<SearchRootProps> = ({ disabled, onSearch, ...textFieldProps }) => {
   const useStyles = makeStyles((theme: Theme) => ({
     root: {
       pointerEvents: 'auto',
@@ -37,6 +38,12 @@ const SearchRoot: FC<SearchRootProps> = ({ disabled, ...textFieldProps }) => {
 
   const classes = useStyles();
 
+  const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      onSearch((event.target as HTMLInputElement).value);
+    }
+  };
+
   return (
     <Autocomplete
       options={[]}
@@ -54,6 +61,7 @@ const SearchRoot: FC<SearchRootProps> = ({ disabled, ...textFieldProps }) => {
           {...textFieldProps}
         />
       )}
+      onKeyPress={handleKeyPress}
     />
   );
 };

@@ -42,6 +42,19 @@ class TokenImageType(graphene.ObjectType):
     error = graphene.Field(ErrorType)
     image_url = graphene.String()
 
+class TokenPriceInfoType(graphene.ObjectType):
+    success = graphene.Boolean()
+    error = graphene.Field(ErrorType)
+    name = graphene.String()
+    symbol = graphene.String()
+    token_price = graphene.Float()
+    percent_change_1h = graphene.Float()
+    percent_change_24h = graphene.Float()
+    percent_change_7d = graphene.Float()
+    percent_change_30d = graphene.Float()
+    percent_change_60d = graphene.Float()
+    percent_change_90d = graphene.Float()
+
 class TokenPriceType(graphene.ObjectType):
     success = graphene.Boolean()
     error = graphene.Field(ErrorType)

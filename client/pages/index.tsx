@@ -43,6 +43,16 @@ const Home = ({ children }: Props) => {
     clearValue: clearCoinmarketcapApiKeyValue,
   } = useInput<string>('');
 
+  const {
+    value: blockExplorerApiKey,
+    onChange: handleBlockExplorerApiKeyApiKeyChange,
+    clearValue: clearBlockExplorerApiKeyApiKeyValue,
+  } = useInput<string>('');
+
+  const handleBlockchainSearch = () => {};
+
+  const isSearchDisabled = coinmarketcapApiKey.length < 32 || blockExplorerApiKey.length < 32;
+
   return (
     <Grid className={classes.wrapper} container>
       <Grid md={6} sm={12} item>
@@ -91,15 +101,14 @@ const Home = ({ children }: Props) => {
       <Grid md={6} sm={12} sx={{ p: '45px 30px' }} item>
         <Box width='570px' display='flex' flexDirection='column' alignItems='center'>
           <SearchByBlockchain
-            disabled={coinmarketcapApiKey.length < 32}
+            disabled={isSearchDisabled}
             tokenSymbol='eth'
             placeholder={
-              coinmarketcapApiKey.length < 32
-                ? 'Enter your api keys to start scanning'
-                : 'Search by wallet or contract address'
+              isSearchDisabled ? 'Enter your api keys to start scanning' : 'Search by wallet or contract address'
             }
             fullWidth
             coinmarketcapApiKey={coinmarketcapApiKey}
+            onSearch={handleBlockchainSearch}
           />
           <img
             className={classes.apiKeysSettingsImage}
@@ -113,6 +122,7 @@ const Home = ({ children }: Props) => {
           <Box display='flex' alignItems='center' width='100%' sx={{ mb: '20px' }}>
             <img src='/icons/Coinmarketcap.logo.svg' height='37px' />
             <InputRoot
+              name='apikey'
               value={coinmarketcapApiKey}
               onChange={handleCoinmarketcapApiKeyChange}
               fullWidth
@@ -126,7 +136,14 @@ const Home = ({ children }: Props) => {
               height='37px'
               style={{ border: '1px solid #E7E7E7', borderRadius: '50%', background: 'white' }}
             />
-            <InputRoot fullWidth placeholder='Enter your Etherscan API Key' sx={{ ml: '10px' }} />
+            <InputRoot
+              name='apikey'
+              value={blockExplorerApiKey}
+              onChange={handleBlockExplorerApiKeyApiKeyChange}
+              fullWidth
+              placeholder='Enter your Etherscan API Key'
+              sx={{ ml: '10px' }}
+            />
           </Box>
         </Box>
       </Grid>

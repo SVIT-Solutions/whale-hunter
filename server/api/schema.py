@@ -6,7 +6,7 @@ from django.utils.translation import gettext_lazy as _
 
 from blockchains.models import Network
 from .utils import create_error_response
-from .functions import fetch_token_price_value, fetch_token_image_url, get_api_key, get_functions_module, check_authenticated
+from .functions import *
 from .types import *
 
 
@@ -18,11 +18,18 @@ class Query(graphene.ObjectType):
         network=graphene.String(required=True),
         description="Get wallet data"
     )
-    token_price = graphene.Field(
+    token_converted_price = graphene.Field(
         TokenPriceType, 
         token_symbol=graphene.String(required=True),
         convert_symbol=graphene.String(default_value="USDT"),
+        coinmarketcap_api_key=graphene.String(required=False),
         description="Get converted token Price from Coinmarketcap API"
+    )
+    token_price_info = graphene.Field(
+        TokenPriceInfoType, 
+        token_symbol=graphene.String(required=True),
+        coinmarketcap_api_key=graphene.String(required=False),
+        description="Get token Info from Coinmarketcap API"
     )
     token_image = graphene.Field(
         TokenImageType,
@@ -90,30 +97,73 @@ class Query(graphene.ObjectType):
         return response_data
 
 
-    def resolve_token_price(self, info, token_symbol, convert_symbol):
+    def resolve_token_converted_price(self, info, token_symbol, convert_symbol, coinmarketcap_api_key=None):
         success = False
-        user = info.context.user
 
         if not token_symbol:
             return create_error_response(message='Token symbol not provided', place='token_symbol')
 
-        # Check Authenticated
-        user = info.context.user
-        is_authenticated, authenticated_error = check_authenticated(user)
-        if not is_authenticated:
-            return create_error_response(message=authenticated_error, place="auth")
+        if coinmarketcap_api_key is not None:
+            api_key = coinmarketcap_api_key
+        else:
+            # Check Authenticated
+            user = info.context.user
+            is_authenticated, authenticated_error = check_authenticated(user)
+            if not is_authenticated:
+                return create_error_response(message=authenticated_error, place="auth")
 
-        # Get Coinmarketcap API Key
-        api_key, api_key_error = get_api_key(user=user, key="coinmarketcap_api_key")
+            # Get Coinmarketcap API Key
+            api_key, api_key_error = get_api_key(user=user, key="coinmarketcap_api_key")
+
         if not api_key:
             return create_error_response(message=api_key_error, place="api_key")
 
-        token_price = fetch_token_price_value(token_symbol=token_symbol, convert_symbol=convert_symbol, api_key=api_key)
+        token_price = fetch_token_converted_price_value(token_symbol=token_symbol, convert_symbol=convert_symbol, api_key=api_key)
 
         if token_price is None:
             return create_error_response(message='Could not find the token price', place='token_price')
 
         return {'success': True, 'token_price': token_price}
+
+
+    def resolve_token_price_info(self, info, token_symbol, coinmarketcap_api_key=None):
+        success = False
+
+        if not token_symbol:
+            return create_error_response(message='Token symbol not provided', place='token_symbol')
+
+        if coinmarketcap_api_key is not None:
+            api_key = coinmarketcap_api_key
+        else:
+            # Check Authenticated
+            user = info.context.user
+            is_authenticated, authenticated_error = check_authenticated(user)
+            if not is_authenticated:
+                return create_error_response(message=authenticated_error, place="auth")
+
+            # Get Coinmarketcap API Key
+            api_key, api_key_error = get_api_key(user=user, key="coinmarketcap_api_key")
+
+        if not api_key:
+            return create_error_response(message=api_key_error, place="api_key")
+
+        token_price_info = fetch_token_price_info(token_symbol=token_symbol, api_key=api_key)
+
+        if token_price_info is None:
+            return create_error_response(message='Could not find token information', place='token_price_info')
+
+        return {
+            "success": True, 
+            "name": token_price_info['name'], 
+            "symbol": token_price_info['symbol'],
+            "token_price": token_price_info['quote']['USD']['price'],
+            "percent_change_1h": token_price_info['quote']['USD']['percent_change_1h'],
+            "percent_change_24h": token_price_info['quote']['USD']['percent_change_24h'],
+            "percent_change_7d": token_price_info['quote']['USD']['percent_change_7d'],
+            "percent_change_30d": token_price_info['quote']['USD']['percent_change_30d'],
+            "percent_change_60d": token_price_info['quote']['USD']['percent_change_60d'],
+            "percent_change_90d": token_price_info['quote']['USD']['percent_change_90d']
+        }
 
 
     def resolve_token_image(self, info, token_symbol, coinmarketcap_api_key=None):
