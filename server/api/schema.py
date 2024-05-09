@@ -27,6 +27,7 @@ class Query(graphene.ObjectType):
     token_image = graphene.Field(
         TokenImageType,
         token_symbol=graphene.String(required=True),
+        coinmarketcap_api_key=graphene.String(required=False),
         description="Get token Image from Coinmarketcap API"
     )
 
@@ -115,20 +116,23 @@ class Query(graphene.ObjectType):
         return {'success': True, 'token_price': token_price}
 
 
-    def resolve_token_image(self, info, token_symbol):
-        user = info.context.user
+    def resolve_token_image(self, info, token_symbol, coinmarketcap_api_key=None):
 
         if not token_symbol:
             return create_error_response(message='Token symbol not provided', place='token_symbol')
 
-        # Check Authenticated
-        user = info.context.user
-        is_authenticated, authenticated_error = check_authenticated(user)
-        if not is_authenticated:
-            return create_error_response(message=authenticated_error, place="auth")
+        if coinmarketcap_api_key is not None:
+            api_key = coinmarketcap_api_key
+        else:
+          # Check Authenticated
+          user = info.context.user
+          is_authenticated, authenticated_error = check_authenticated(user)
+          if not is_authenticated:
+              return create_error_response(message=authenticated_error, place="auth")
 
-        # Get Coinmarketcap API Key
-        api_key, api_key_error = get_api_key(user=user, key="coinmarketcap_api_key")
+          # Get Coinmarketcap API Key
+          api_key, api_key_error = get_api_key(user=user, key="coinmarketcap_api_key")
+
         if not api_key:
             return create_error_response(message=api_key_error, place="api_key")
 

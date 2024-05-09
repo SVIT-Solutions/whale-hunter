@@ -1,5 +1,5 @@
 import React, { FC } from 'react';
-import { Box, Link, LinkProps, Typography, colors } from '@mui/material';
+import { Box, Link, LinkProps, Theme, Typography, colors } from '@mui/material';
 import { makeStyles, useTheme } from '@mui/styles';
 
 export interface ResourcesLinkProps extends LinkProps {
@@ -10,7 +10,7 @@ export interface ResourcesLinkProps extends LinkProps {
 const ResourcesLink: FC<ResourcesLinkProps> = ({ icon, text, ...linkProps }) => {
   const theme = useTheme();
 
-  const useStyles = makeStyles({
+  const useStyles = makeStyles((theme: Theme) => ({
     root: { cursor: 'pointer' },
     icon: {
       marginRight: '10px',
@@ -23,7 +23,7 @@ const ResourcesLink: FC<ResourcesLinkProps> = ({ icon, text, ...linkProps }) => 
         fill: theme.palette.primary.main,
       },
     },
-  });
+  }));
   const classes = useStyles();
 
   return (

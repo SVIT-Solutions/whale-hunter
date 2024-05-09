@@ -1,8 +1,9 @@
 import { createTheme } from '@mui/material';
 import { defaultColors, googleButtonColor } from './colors';
 import { hexToRgba } from '@/utils';
+import { ThemeColorsType } from '@/types';
 
-const createCustomTheme = (colors: any) => {
+const createCustomTheme = (colors: ThemeColorsType) => {
   return createTheme({
     typography: {
       fontFamily: 'Open Sans, sans-serif',
@@ -42,6 +43,12 @@ const createCustomTheme = (colors: any) => {
       markup: {
         main: colors.markup,
       },
+      header: {
+        main: colors.headersTextColor,
+      },
+      disabled: {
+        main: colors.disabled,
+      },
     },
     components: {
       MuiCard: {
@@ -56,11 +63,39 @@ const createCustomTheme = (colors: any) => {
           root: {
             textTransform: 'none',
             fontSize: '16px',
+            borderRadius: '100px',
+            height: '44px',
           },
           contained: {
             color: colors.headersTextColor,
           },
         },
+      },
+      MuiTextField: {
+        styleOverrides: {
+          root: {
+            border: '1px solid',
+            borderColor: colors.headersTextColor,
+            borderRadius: '100px',
+            '& .MuiOutlinedInput-notchedOutline': {
+              display: 'none',
+            },
+          },
+        },
+      },
+      MuiInputBase: {
+        styleOverrides: {
+          root: {
+            color: colors.headersTextColor,
+            fontSize: '16px',
+            height: '37px',
+            '& input': { height: '37px', boxSizing: 'border-box' },
+            '& input::placeholder': { color: colors.markup },
+          },
+        },
+      },
+      MuiSvgIcon: {
+        styleOverrides: { root: { color: colors.headersTextColor } },
       },
       MuiCssBaseline: {
         styleOverrides: {

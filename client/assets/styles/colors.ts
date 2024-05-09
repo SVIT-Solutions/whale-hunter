@@ -5,6 +5,7 @@ export const defaultColors = {
   secondary: '#F39C12',
   success: '#27AE60',
   markup: '#CCCCCC',
+  disabled: '#767676',
   headersTextColor: '#FFF',
   card: '#1E2B46',
   backgroundColor1: '#1E2B46',

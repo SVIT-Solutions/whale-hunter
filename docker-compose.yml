@@ -30,7 +30,7 @@ services:
       - ./client:/var/www/client
       - ./server:/var/www/server
     environment:
-      - REACT_APP_GRAPHQL_ENDPOINT=${REACT_APP_GRAPHQL_ENDPOINT}
+      - SERVER_GRAPHQL_ENDPOINT=${SERVER_GRAPHQL_ENDPOINT}
 
   redis:
     image: "redis:latest"

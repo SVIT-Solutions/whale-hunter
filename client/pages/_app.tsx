@@ -5,6 +5,7 @@ import { Provider } from 'react-redux';
 
 import store from '@/redux/store';
 import { defaultTheme } from '@/assets/styles/theme';
+import { ApolloClient, ApolloProvider, InMemoryCache } from '@apollo/client';
 
 export default function App({ Component, pageProps }: AppProps) {
   React.useEffect(() => {
@@ -14,12 +15,19 @@ export default function App({ Component, pageProps }: AppProps) {
     }
   }, []);
 
+  const client = new ApolloClient({
+    uri: process.env.SERVER_GRAPHQL_ENDPOINT,
+    cache: new InMemoryCache(),
+  });
+
   return (
     <ThemeProvider theme={defaultTheme}>
       <CssBaseline />
-      <Provider store={store}>
-        <Component {...pageProps} />
-      </Provider>
+      <ApolloProvider client={client}>
+        <Provider store={store}>
+          <Component {...pageProps} />
+        </Provider>
+      </ApolloProvider>
     </ThemeProvider>
   );
 }

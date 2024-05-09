@@ -1,4 +1,4 @@
-import { Box, Typography } from '@mui/material';
+import { Box, Theme, Typography } from '@mui/material';
 import { makeStyles } from '@mui/styles';
 import React, { FC } from 'react';
 
@@ -9,7 +9,7 @@ interface RoundedIconButtonProps extends ButtonRootProps {
 }
 
 const RoundedIconButton: FC<RoundedIconButtonProps> = ({ children, iconSize = '40.74px', ...buttonProps }) => {
-  const useStyles = makeStyles({
+  const useStyles = makeStyles((theme: Theme) => ({
     root: {
       '& button': {
         paddingLeft: 0,
@@ -25,7 +25,7 @@ const RoundedIconButton: FC<RoundedIconButtonProps> = ({ children, iconSize = '4
         },
       },
     },
-  });
+  }));
 
   const classes = useStyles();
 
