@@ -83,6 +83,7 @@ const createCustomTheme = (colors: ThemeColorsType) => {
           },
         },
       },
+
       MuiInputBase: {
         styleOverrides: {
           root: {

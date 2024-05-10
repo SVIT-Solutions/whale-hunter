@@ -11,7 +11,6 @@ import SearchByBlockchain from '@/components/inputs/searches/SearchByBlockchain'
 import XLogo from '@/assets/icons/X.logo';
 import GitHubLogo from '@/assets/icons/GitHub.logo';
 import InputRoot from '@/components/inputs/InputRoot';
-import useInput from '@/hooks';
 
 interface Props {
   children?: React.ReactNode;
@@ -37,21 +36,42 @@ const Home = ({ children }: Props) => {
   const classes = useStyles();
   const theme = useTheme<Theme>();
 
-  const {
-    value: coinmarketcapApiKey,
-    onChange: handleCoinmarketcapApiKeyChange,
-    clearValue: clearCoinmarketcapApiKeyValue,
-  } = useInput<string>('');
+  // API Keys Inputs
+  const [coinmarketcapApiKey, setCoinmarketcapApiKey] = useState<string>('');
+  const [blockExplorerApiKey, setBlockExplorerApiKey] = useState<string>('');
 
-  const {
-    value: blockExplorerApiKey,
-    onChange: handleBlockExplorerApiKeyApiKeyChange,
-    clearValue: clearBlockExplorerApiKeyApiKeyValue,
-  } = useInput<string>('');
+  const [coinmarketcapApiKeyError, setCoinmarketcapApiKeyError] = useState<boolean>(false);
+  const [blockExplorerApiKeyError, setBlockExplorerApiKeyError] = useState<boolean>(false);
+
+  const handleCoinmarketcapApiKeyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setCoinmarketcapApiKey(event.target.value as string);
+    if (coinmarketcapApiKeyError) {
+      setCoinmarketcapApiKeyError(false);
+    }
+  };
+
+  const handleBlockExplorerApiKeyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setBlockExplorerApiKey(event.target.value as string);
+    if (blockExplorerApiKeyError) {
+      setBlockExplorerApiKeyError(false);
+    }
+  };
+
+  // Blockchain Search
+  const isSearchDisabled = coinmarketcapApiKey?.length < 32 || blockExplorerApiKey?.length < 32;
 
   const handleBlockchainSearch = () => {};
 
-  const isSearchDisabled = coinmarketcapApiKey.length < 32 || blockExplorerApiKey.length < 32;
+  const handleBlockchainSearchClick = () => {
+    if (!isSearchDisabled) return;
+
+    if (coinmarketcapApiKey?.length < 32) {
+      setCoinmarketcapApiKeyError(true);
+    }
+    if (blockExplorerApiKey?.length < 32) {
+      setBlockExplorerApiKeyError(true);
+    }
+  };
 
   return (
     <Grid className={classes.wrapper} container>
@@ -98,9 +118,10 @@ const Home = ({ children }: Props) => {
           </Box>
         </Card>
       </Grid>
-      <Grid md={6} sm={12} sx={{ p: '45px 30px' }} item>
-        <Box width='570px' display='flex' flexDirection='column' alignItems='center'>
+      <Grid md={6} sm={12} sx={{ p: '0px 30px' }} item display='flex' alignItems='center'>
+        <Box sx={{ mb: '80px' }} width='570px' display='flex' flexDirection='column' alignItems='center'>
           <SearchByBlockchain
+            onClick={handleBlockchainSearchClick}
             disabled={isSearchDisabled}
             tokenSymbol='eth'
             placeholder={
@@ -123,6 +144,7 @@ const Home = ({ children }: Props) => {
             <img src='/icons/Coinmarketcap.logo.svg' height='37px' />
             <InputRoot
               name='apikey'
+              error={coinmarketcapApiKeyError}
               value={coinmarketcapApiKey}
               onChange={handleCoinmarketcapApiKeyChange}
               fullWidth
@@ -138,8 +160,9 @@ const Home = ({ children }: Props) => {
             />
             <InputRoot
               name='apikey'
+              error={blockExplorerApiKeyError}
               value={blockExplorerApiKey}
-              onChange={handleBlockExplorerApiKeyApiKeyChange}
+              onChange={handleBlockExplorerApiKeyChange}
               fullWidth
               placeholder='Enter your Etherscan API Key'
               sx={{ ml: '10px' }}

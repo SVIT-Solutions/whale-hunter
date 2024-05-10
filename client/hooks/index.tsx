@@ -56,15 +56,15 @@ export function useGetTokenLogoPath({ tokenSymbol, coinmarketcapApiKey }: GetTok
   return tokenImage;
 }
 
-const useInput = (initialValue: T) => {
-  const [value, setValue] = useState<T>(initialValue);
+const useInput = <T,>(initialValue: T) => {
+  const [value, setValue] = useState<T | null>(initialValue);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setValue(event.target.value);
+    setValue(event.target.value as T);
   };
 
   const clearValue = () => {
-    setValue('');
+    setValue(null);
   };
 
   return {

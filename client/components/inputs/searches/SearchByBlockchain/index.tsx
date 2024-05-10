@@ -10,12 +10,14 @@ import TokenIconButton from '@/components/buttons/TokenIconButton';
 interface SearchByBlockchainProps extends SearchRootProps {
   tokenSymbol?: string;
   coinmarketcapApiKey?: string;
+  onClick?: () => void;
 }
 
 const SearchByBlockchain: FC<SearchByBlockchainProps> = ({
   tokenSymbol = 'ETH',
   coinmarketcapApiKey,
   disabled,
+  onClick,
   ...textFieldProps
 }) => {
   const tokenLogoPath = useGetTokenLogoPath({ tokenSymbol, coinmarketcapApiKey });
@@ -32,7 +34,7 @@ const SearchByBlockchain: FC<SearchByBlockchainProps> = ({
   const classes = useStyles();
 
   return (
-    <Box className={classes.root}>
+    <Box onClick={onClick} className={classes.root}>
       <SearchRoot
         disabled={disabled}
         name='token'
