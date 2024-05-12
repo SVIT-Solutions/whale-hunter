@@ -16,6 +16,7 @@ class Query(graphene.ObjectType):
         WalletType,
         wallet_address=graphene.String(required=True),
         network=graphene.String(required=True),
+        block_explorer_api_key=graphene.String(required=False),
         description="Get wallet data"
     )
     token_converted_price = graphene.Field(
@@ -43,15 +44,20 @@ class Query(graphene.ObjectType):
         return Network.objects.all()
 
 
-    def resolve_wallet(self, info, wallet_address, network):
-        # Check Authenticated
-        user = info.context.user
-        is_authenticated, authenticated_error = check_authenticated(user)
-        if not is_authenticated:
-            return create_error_response(message=authenticated_error, place="auth")
+    def resolve_wallet(self, info, wallet_address, network, block_explorer_api_key=None):
 
-        # Get Etherscan API Key
-        api_key, api_key_error = get_api_key(user=user, key="etherscan_api_key")
+        if block_explorer_api_key is not None:
+            api_key = block_explorer_api_key
+        else:
+            # Check Authenticated
+            user = info.context.user
+            is_authenticated, authenticated_error = check_authenticated(user)
+            if not is_authenticated:
+                return create_error_response(message=authenticated_error, place="auth")
+
+            # Get Etherscan API Key
+            api_key, api_key_error = get_api_key(user=user, key="etherscan_api_key")
+
         if not api_key:
             return create_error_response(message=api_key_error, place="api_key")
 

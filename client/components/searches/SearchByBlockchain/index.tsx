@@ -1,10 +1,10 @@
-import React, { FC } from 'react';
+import React, { FC, useEffect } from 'react';
 import { Box, InputAdornment, Theme } from '@mui/material';
 import { makeStyles } from '@mui/styles';
 import { LockOutlined, SearchOutlined } from '@mui/icons-material';
 
-import SearchRoot, { SearchRootProps } from '@/components/inputs/searches/SearchRoot';
-import { useGetTokenLogoPath } from '@/hooks';
+import SearchRoot, { SearchRootProps } from '@/components/searches/SearchRoot';
+import { useGetTokenLogosPaths } from '@/hooks/useGetTokenLogosPaths';
 import TokenIconButton from '@/components/buttons/TokenIconButton';
 
 interface SearchByBlockchainProps extends SearchRootProps {
@@ -20,8 +20,6 @@ const SearchByBlockchain: FC<SearchByBlockchainProps> = ({
   onClick,
   ...textFieldProps
 }) => {
-  const tokenLogoPath = useGetTokenLogoPath({ tokenSymbol, coinmarketcapApiKey });
-
   const useStyles = makeStyles((theme: Theme) => ({
     root: {
       width: '100%',
@@ -32,6 +30,12 @@ const SearchByBlockchain: FC<SearchByBlockchainProps> = ({
   }));
 
   const classes = useStyles();
+
+  const { images, getImages } = useGetTokenLogosPaths(coinmarketcapApiKey);
+
+  useEffect(() => {
+    getImages([tokenSymbol]);
+  }, [tokenSymbol]);
 
   return (
     <Box onClick={onClick} className={classes.root}>
@@ -48,7 +52,7 @@ const SearchByBlockchain: FC<SearchByBlockchainProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                 }}
-                tokenLogoPath={tokenLogoPath}
+                tokenLogoPath={images?.[tokenSymbol.toUpperCase()]}
               />
             </InputAdornment>
           ),

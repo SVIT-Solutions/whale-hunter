@@ -1,9 +1,9 @@
 import { createTheme } from '@mui/material';
 import { defaultColors, googleButtonColor } from './colors';
 import { hexToRgba } from '@/utils';
-import { ThemeColorsType } from '@/types';
+import { IThemeColors } from '@/types';
 
-const createCustomTheme = (colors: ThemeColorsType) => {
+const createCustomTheme = (colors: IThemeColors) => {
   return createTheme({
     typography: {
       fontFamily: 'Open Sans, sans-serif',
@@ -37,6 +37,9 @@ const createCustomTheme = (colors: ThemeColorsType) => {
       success: {
         main: colors.success,
       },
+      error: {
+        main: colors.error,
+      },
       google: {
         main: googleButtonColor,
       },
@@ -55,6 +58,25 @@ const createCustomTheme = (colors: ThemeColorsType) => {
         styleOverrides: {
           root: {
             backgroundColor: colors.card,
+            borderColor: colors.cardBorderColor,
+            boxShadow: `0 0 2px 1px ${colors.cardBorderColor}`,
+          },
+        },
+      },
+      MuiTable: {
+        styleOverrides: {
+          root: {
+            '& .MuiTableCell-root': {
+              color: colors.headersTextColor,
+              borderColor: colors.tableDelimiterColor,
+              fontSize: '16px',
+              padding: '10px 0',
+            },
+            '& .MuiTableCell-head': {
+              fontSize: '12px',
+              fontWeight: 400,
+              paddingBottom: '5px',
+            },
           },
         },
       },
@@ -83,7 +105,6 @@ const createCustomTheme = (colors: ThemeColorsType) => {
           },
         },
       },
-
       MuiInputBase: {
         styleOverrides: {
           root: {
@@ -107,6 +128,7 @@ const createCustomTheme = (colors: ThemeColorsType) => {
               colors.backgroundColor2,
               1
             )} 100%);`,
+            scrollbarColor: `#888 ${colors.card}`,
           },
         },
       },

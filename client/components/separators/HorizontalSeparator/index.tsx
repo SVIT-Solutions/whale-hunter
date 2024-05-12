@@ -4,12 +4,10 @@ import { makeStyles } from '@mui/styles';
 
 interface HorizontalSeparatorProps {
   children?: React.ReactNode;
-  width?: string;
-  height?: string;
   margin?: string;
 }
 
-const HorizontalSeparator: FC<HorizontalSeparatorProps> = ({ children, width = '100%', height = `44px`, margin }) => {
+const HorizontalSeparator: FC<HorizontalSeparatorProps> = ({ children, margin }) => {
   const useStyles = makeStyles({
     root: { display: 'flex', margin },
     line: { width: '100%', height: '1px', dispaly: 'flex' },

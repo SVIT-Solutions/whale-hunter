@@ -12,3 +12,29 @@ export const GET_TOKEN_IMAGE = gql`
     }
   }
 `;
+
+export const GET_WALLET_DATA = gql`
+  query GetWalletData($walletAddress: String!, $network: String!, $blockExplorerApiKey: String!) {
+    wallet(walletAddress: $walletAddress, network: $network, blockExplorerApiKey: $blockExplorerApiKey) {
+      success
+      transactions {
+        fromAddress
+        toAddress
+        value
+        tokenSymbol
+        tokenName
+        timeStamp
+      }
+      tokenBalances {
+        name
+        symbol
+        balance
+        contractAddress
+      }
+      error {
+        message
+        place
+      }
+    }
+  }
+`;

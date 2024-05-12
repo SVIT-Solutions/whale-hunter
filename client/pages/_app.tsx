@@ -3,9 +3,10 @@ import { CssBaseline, ThemeProvider } from '@mui/material';
 import { AppProps } from 'next/app';
 import { Provider } from 'react-redux';
 
-import store from '@/redux/store';
 import { defaultTheme } from '@/assets/styles/theme';
-import { ApolloClient, ApolloProvider, InMemoryCache } from '@apollo/client';
+import { ApolloProvider } from '@apollo/client';
+import client from '@/graphql/client';
+import { store } from '@/redux/store';
 
 export default function App({ Component, pageProps }: AppProps) {
   React.useEffect(() => {
@@ -14,11 +15,6 @@ export default function App({ Component, pageProps }: AppProps) {
       jssStyles?.parentElement?.removeChild(jssStyles);
     }
   }, []);
-
-  const client = new ApolloClient({
-    uri: process.env.SERVER_GRAPHQL_ENDPOINT,
-    cache: new InMemoryCache(),
-  });
 
   return (
     <ThemeProvider theme={defaultTheme}>

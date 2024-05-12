@@ -1,16 +1,33 @@
-import React, { useState } from 'react';
-import { Box, Card, Grid, Theme, Typography } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import {
+  Box,
+  Card,
+  CircularProgress,
+  Grid,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Theme,
+  Typography,
+} from '@mui/material';
 import { makeStyles, useTheme } from '@mui/styles';
 
 import RoundedIconButton from '@/components/buttons/RoundedIconButton';
 import HorizontalSeparator from '@/components/separators/HorizontalSeparator';
 import ButtonRoot from '@/components/buttons/ButtonRoot';
 import ResourcesLink from '@/components/links/ResourcesLink';
-import SearchByBlockchain from '@/components/inputs/searches/SearchByBlockchain';
+import SearchByBlockchain from '@/components/searches/SearchByBlockchain';
 
 import XLogo from '@/assets/icons/X.logo';
 import GitHubLogo from '@/assets/icons/GitHub.logo';
 import InputRoot from '@/components/inputs/InputRoot';
+import { useApolloClient } from '@apollo/client';
+import { GET_WALLET_DATA } from '@/graphql/queries';
+import { useGetTokenLogosPaths } from '@/hooks/useGetTokenLogosPaths';
+import TokenImage from '@/components/TokenImage';
 
 interface Props {
   children?: React.ReactNode;
@@ -30,19 +47,41 @@ const useStyles = makeStyles((theme: Theme) => ({
   apiKeysSettingsImage: {
     margin: '50px 0',
   },
+  tableContainer: {
+    height: '402.4px',
+    overflowY: 'auto',
+    padding: '0 15px 0 25px',
+    borderRadius: '10px',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+  },
 }));
 
 const Home = ({ children }: Props) => {
   const classes = useStyles();
   const theme = useTheme<Theme>();
 
-  // API Keys Inputs
+  const client = useApolloClient();
+
   const [coinmarketcapApiKey, setCoinmarketcapApiKey] = useState<string>('');
   const [blockExplorerApiKey, setBlockExplorerApiKey] = useState<string>('');
 
   const [coinmarketcapApiKeyError, setCoinmarketcapApiKeyError] = useState<boolean>(false);
   const [blockExplorerApiKeyError, setBlockExplorerApiKeyError] = useState<boolean>(false);
 
+  const { images, loading, getImages } = useGetTokenLogosPaths(coinmarketcapApiKey);
+
+  const [walletData, setWalletData] = useState<object | null>(null);
+
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const isSearchDisabled = isLoading || coinmarketcapApiKey?.length < 32 || blockExplorerApiKey?.length < 32;
+
+  const searchPlaceholderText = isSearchDisabled
+    ? 'Enter your api keys to start scanning'
+    : 'Search by wallet or contract address';
+
+  // API Keys Inputs change handlers
   const handleCoinmarketcapApiKeyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setCoinmarketcapApiKey(event.target.value as string);
     if (coinmarketcapApiKeyError) {
@@ -57,10 +96,25 @@ const Home = ({ children }: Props) => {
     }
   };
 
-  // Blockchain Search
-  const isSearchDisabled = coinmarketcapApiKey?.length < 32 || blockExplorerApiKey?.length < 32;
-
-  const handleBlockchainSearch = () => {};
+  // Search handlers
+  const handleBlockchainSearch = async (value: string) => {
+    if (value?.length === 42 && value.startsWith('0x')) {
+      setIsLoading(true);
+      try {
+        const response = await client.query({
+          query: GET_WALLET_DATA,
+          variables: { walletAddress: value, network: 'eth', blockExplorerApiKey },
+        });
+        const data = response.data.wallet;
+        if (data.success) {
+          setWalletData({ transactions: data.transactions, tokenBalances: data.tokenBalances });
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+    }
+  };
 
   const handleBlockchainSearchClick = () => {
     if (!isSearchDisabled) return;
@@ -72,6 +126,13 @@ const Home = ({ children }: Props) => {
       setBlockExplorerApiKeyError(true);
     }
   };
+
+  useEffect(() => {
+    if (walletData) {
+      const tokenSymbols = walletData.tokenBalances.map((balance) => balance.symbol);
+      getImages(tokenSymbols);
+    }
+  }, [walletData]);
 
   return (
     <Grid className={classes.wrapper} container>
@@ -118,29 +179,41 @@ const Home = ({ children }: Props) => {
           </Box>
         </Card>
       </Grid>
-      <Grid md={6} sm={12} sx={{ p: '0px 30px' }} item display='flex' alignItems='center'>
-        <Box sx={{ mb: '80px' }} width='570px' display='flex' flexDirection='column' alignItems='center'>
+      <Grid md={6} sm={12} sx={{ p: '45px 30px' }} item display='flex'>
+        <Box width='570px' display='flex' flexDirection='column' alignItems='center'>
           <SearchByBlockchain
             onClick={handleBlockchainSearchClick}
             disabled={isSearchDisabled}
             tokenSymbol='eth'
-            placeholder={
-              isSearchDisabled ? 'Enter your api keys to start scanning' : 'Search by wallet or contract address'
-            }
+            placeholder={searchPlaceholderText}
             fullWidth
             coinmarketcapApiKey={coinmarketcapApiKey}
             onSearch={handleBlockchainSearch}
           />
-          <img
-            className={classes.apiKeysSettingsImage}
-            src='/images/HomePage.APIKeysSettings.png'
-            alt='API Keys Settings'
-          />
-          <Typography color='markup' sx={{ color: theme.palette.markup.main, mb: '40px' }}>
-            The application is still under development, for this reason we ask you to enter your API keys for the
-            corresponding requests
-          </Typography>
-          <Box display='flex' alignItems='center' width='100%' sx={{ mb: '20px' }}>
+
+          {walletData ? (
+            ''
+          ) : (
+            <Box height='402.4px' display='flex' flexDirection='column' justifyContent='center' alignItems='center'>
+              {isLoading ? (
+                <CircularProgress size='52px' />
+              ) : (
+                <>
+                  <img
+                    className={classes.apiKeysSettingsImage}
+                    src='/images/HomePage.APIKeysSettings.png'
+                    alt='API Keys Settings'
+                  />
+                  <Typography color='markup' sx={{ color: theme.palette.markup.main }}>
+                    The application is still under development, for this reason we ask you to enter your API keys for
+                    the corresponding requests
+                  </Typography>
+                </>
+              )}
+            </Box>
+          )}
+
+          <Box display='flex' alignItems='center' width='100%' sx={{ mb: '20px', mt: '40px' }}>
             <img src='/icons/Coinmarketcap.logo.svg' height='37px' />
             <InputRoot
               name='apikey'
@@ -168,6 +241,42 @@ const Home = ({ children }: Props) => {
               sx={{ ml: '10px' }}
             />
           </Box>
+
+          {walletData && (
+            <Box sx={{ mt: '40px', width: '100%' }}>
+              <TableContainer component={Card} className={classes.tableContainer}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Token</TableCell>
+                      <TableCell>Price</TableCell>
+                      <TableCell>Balance</TableCell>
+                      <TableCell>Value</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {walletData?.tokenBalances?.map((token) => (
+                      <TableRow>
+                        <TableCell>
+                          <Box display='flex'>
+                            <TokenImage
+                              loading={loading}
+                              image={images?.[token?.symbol.toUpperCase()]}
+                              style={{ marginRight: '5px' }}
+                            />
+                            {token?.symbol}
+                          </Box>
+                        </TableCell>
+                        <TableCell>{'-'}</TableCell>
+                        <TableCell>{token?.balance}</TableCell>
+                        <TableCell>{'-'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
         </Box>
       </Grid>
     </Grid>
