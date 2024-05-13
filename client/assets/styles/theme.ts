@@ -70,13 +70,23 @@ const createCustomTheme = (colors: IThemeColors) => {
               color: colors.headersTextColor,
               borderColor: colors.tableDelimiterColor,
               fontSize: '16px',
-              padding: '10px 0',
+              fontWeight: 400,
+              padding: '10px',
             },
             '& .MuiTableCell-head': {
               fontSize: '12px',
               fontWeight: 400,
               paddingBottom: '5px',
             },
+          },
+        },
+      },
+      MuiTableContainer: {
+        styleOverrides: {
+          root: {
+            height: '100%',
+            overflow: 'auto',
+            padding: '15px',
           },
         },
       },

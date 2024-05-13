@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   Card,
@@ -20,14 +20,17 @@ import HorizontalSeparator from '@/components/separators/HorizontalSeparator';
 import ButtonRoot from '@/components/buttons/ButtonRoot';
 import ResourcesLink from '@/components/links/ResourcesLink';
 import SearchByBlockchain from '@/components/searches/SearchByBlockchain';
-
+import TokenImage from '@/components/TokenImage';
 import XLogo from '@/assets/icons/X.logo';
 import GitHubLogo from '@/assets/icons/GitHub.logo';
 import InputRoot from '@/components/inputs/InputRoot';
 import { useApolloClient } from '@apollo/client';
 import { GET_WALLET_DATA } from '@/graphql/queries';
-import { useGetTokenLogosPaths } from '@/hooks/useGetTokenLogosPaths';
-import TokenImage from '@/components/TokenImage';
+import { useGetTokensData } from '@/hooks/useGetTokensData';
+import { IWalletData } from '@/types';
+import TableRoot from '@/components/tables/TableRoot';
+import { useHeight } from '@/hooks/useHeight';
+import { useZoomLevel } from '@/hooks/useZoomLevel';
 
 interface Props {
   children?: React.ReactNode;
@@ -54,6 +57,7 @@ const useStyles = makeStyles((theme: Theme) => ({
     borderRadius: '10px',
     borderWidth: '1px',
     borderStyle: 'solid',
+    '& .MuiTableCell-root': { whiteSpace: 'nowrap', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis' },
   },
 }));
 
@@ -63,15 +67,17 @@ const Home = ({ children }: Props) => {
 
   const client = useApolloClient();
 
+  const zoomLevel = useZoomLevel();
+
   const [coinmarketcapApiKey, setCoinmarketcapApiKey] = useState<string>('');
   const [blockExplorerApiKey, setBlockExplorerApiKey] = useState<string>('');
 
   const [coinmarketcapApiKeyError, setCoinmarketcapApiKeyError] = useState<boolean>(false);
   const [blockExplorerApiKeyError, setBlockExplorerApiKeyError] = useState<boolean>(false);
 
-  const { images, loading, getImages } = useGetTokenLogosPaths(coinmarketcapApiKey);
+  const { images, prices, imagesLoading, pricesLoading, getImages, getPrices } = useGetTokensData(coinmarketcapApiKey);
 
-  const [walletData, setWalletData] = useState<object | null>(null);
+  const [walletData, setWalletData] = useState<IWalletData | null>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -127,10 +133,39 @@ const Home = ({ children }: Props) => {
     }
   };
 
+  const tableData = useMemo(() => {
+    const columns = ['Token', 'Prise', 'Balance', 'Value'];
+
+    if (!walletData || isLoading) return { columns };
+
+    const objects = walletData.tokenBalances.map((balance) => {
+      const normalizedTokenSymbol = balance.symbol.toUpperCase();
+
+      return {
+        token: { image: images?.[normalizedTokenSymbol], value: balance.symbol },
+        price: {
+          value: prices?.[normalizedTokenSymbol] ? `$${prices?.[normalizedTokenSymbol]}` : '',
+          loading: pricesLoading,
+        },
+        balance: balance.balance,
+        value: {
+          value:
+            prices?.[normalizedTokenSymbol] * balance.balance
+              ? `$${prices?.[normalizedTokenSymbol] * balance.balance}`
+              : '',
+          loading: pricesLoading,
+        },
+      };
+    });
+
+    return { columns, objects };
+  }, [walletData, imagesLoading, pricesLoading]);
+
   useEffect(() => {
     if (walletData) {
       const tokenSymbols = walletData.tokenBalances.map((balance) => balance.symbol);
       getImages(tokenSymbols);
+      getPrices(tokenSymbols);
     }
   }, [walletData]);
 
@@ -179,105 +214,76 @@ const Home = ({ children }: Props) => {
           </Box>
         </Card>
       </Grid>
-      <Grid md={6} sm={12} sx={{ p: '45px 30px' }} item display='flex'>
-        <Box width='570px' display='flex' flexDirection='column' alignItems='center'>
-          <SearchByBlockchain
-            onClick={handleBlockchainSearchClick}
-            disabled={isSearchDisabled}
-            tokenSymbol='eth'
-            placeholder={searchPlaceholderText}
-            fullWidth
-            coinmarketcapApiKey={coinmarketcapApiKey}
-            onSearch={handleBlockchainSearch}
-          />
-
-          {walletData ? (
-            ''
-          ) : (
-            <Box height='402.4px' display='flex' flexDirection='column' justifyContent='center' alignItems='center'>
-              {isLoading ? (
-                <CircularProgress size='52px' />
-              ) : (
-                <>
-                  <img
-                    className={classes.apiKeysSettingsImage}
-                    src='/images/HomePage.APIKeysSettings.png'
-                    alt='API Keys Settings'
-                  />
-                  <Typography color='markup' sx={{ color: theme.palette.markup.main }}>
-                    The application is still under development, for this reason we ask you to enter your API keys for
-                    the corresponding requests
-                  </Typography>
-                </>
-              )}
-            </Box>
-          )}
-
-          <Box display='flex' alignItems='center' width='100%' sx={{ mb: '20px', mt: '40px' }}>
-            <img src='/icons/Coinmarketcap.logo.svg' height='37px' />
-            <InputRoot
-              name='apikey'
-              error={coinmarketcapApiKeyError}
-              value={coinmarketcapApiKey}
-              onChange={handleCoinmarketcapApiKeyChange}
+      <Grid md={6} sm={12} sx={{ p: '45px 30px 0px' }} item display='flex'>
+        <Grid container>
+          <Grid md={10} sm={12} item display='flex' flexDirection='column' alignItems='center'>
+            <SearchByBlockchain
+              onClick={handleBlockchainSearchClick}
+              disabled={isSearchDisabled}
+              tokenSymbol='eth'
+              placeholder={searchPlaceholderText}
               fullWidth
-              placeholder='Enter your coinmarketcap API Key'
-              sx={{ ml: '10px' }}
+              coinmarketcapApiKey={coinmarketcapApiKey}
+              onSearch={handleBlockchainSearch}
             />
-          </Box>
-          <Box display='flex' alignItems='center' width='100%'>
-            <img
-              src='/icons/Etherscan.logo.svg'
-              height='37px'
-              style={{ border: '1px solid #E7E7E7', borderRadius: '50%', background: 'white' }}
-            />
-            <InputRoot
-              name='apikey'
-              error={blockExplorerApiKeyError}
-              value={blockExplorerApiKey}
-              onChange={handleBlockExplorerApiKeyChange}
-              fullWidth
-              placeholder='Enter your Etherscan API Key'
-              sx={{ ml: '10px' }}
-            />
-          </Box>
 
-          {walletData && (
-            <Box sx={{ mt: '40px', width: '100%' }}>
-              <TableContainer component={Card} className={classes.tableContainer}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Token</TableCell>
-                      <TableCell>Price</TableCell>
-                      <TableCell>Balance</TableCell>
-                      <TableCell>Value</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {walletData?.tokenBalances?.map((token) => (
-                      <TableRow>
-                        <TableCell>
-                          <Box display='flex'>
-                            <TokenImage
-                              loading={loading}
-                              image={images?.[token?.symbol.toUpperCase()]}
-                              style={{ marginRight: '5px' }}
-                            />
-                            {token?.symbol}
-                          </Box>
-                        </TableCell>
-                        <TableCell>{'-'}</TableCell>
-                        <TableCell>{token?.balance}</TableCell>
-                        <TableCell>{'-'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+            {!walletData && !isLoading && (
+              <Box height='402.4px' display='flex' flexDirection='column' justifyContent='center' alignItems='center'>
+                <img
+                  className={classes.apiKeysSettingsImage}
+                  src='/images/HomePage.APIKeysSettings.png'
+                  alt='API Keys Settings'
+                />
+                <Typography color='markup' sx={{ color: theme.palette.markup.main }}>
+                  The application is still under development, for this reason we ask you to enter your API keys for the
+                  corresponding requests
+                </Typography>
+              </Box>
+            )}
+
+            <Box display='flex' alignItems='center' width='100%' sx={{ mb: '20px', mt: '40px' }}>
+              <img src='/icons/Coinmarketcap.logo.svg' height='37px' />
+              <InputRoot
+                name='apikey'
+                error={coinmarketcapApiKeyError}
+                value={coinmarketcapApiKey}
+                onChange={handleCoinmarketcapApiKeyChange}
+                fullWidth
+                placeholder='Enter your coinmarketcap API Key'
+                sx={{ ml: '10px' }}
+              />
             </Box>
-          )}
-        </Box>
+            <Box display='flex' alignItems='center' width='100%'>
+              <img
+                src='/icons/Etherscan.logo.svg'
+                height='37px'
+                style={{ border: '1px solid #E7E7E7', borderRadius: '50%', background: 'white' }}
+              />
+              <InputRoot
+                name='apikey'
+                error={blockExplorerApiKeyError}
+                value={blockExplorerApiKey}
+                onChange={handleBlockExplorerApiKeyChange}
+                fullWidth
+                placeholder='Enter your Etherscan API Key'
+                sx={{ ml: '10px' }}
+              />
+            </Box>
+
+            {(walletData || isLoading) && (
+              <Box
+                sx={{
+                  mt: '40px',
+                  width: '100%',
+                  maxHeight: (window.innerHeight * zoomLevel - 150) / zoomLevel / 1.25,
+                }}
+              >
+                <TableRoot data={tableData} />
+              </Box>
+            )}
+          </Grid>
+          <Grid item></Grid>
+        </Grid>
       </Grid>
     </Grid>
   );

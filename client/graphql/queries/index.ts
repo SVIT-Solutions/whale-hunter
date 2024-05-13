@@ -38,3 +38,20 @@ export const GET_WALLET_DATA = gql`
     }
   }
 `;
+
+export const GET_TOKEN_CONVERTED_PRICE = gql`
+  query GetTokenConvertedPrice($tokenSymbol: String!, $convertSymbol: String, $coinmarketcapApiKey: String) {
+    tokenConvertedPrice(
+      tokenSymbol: $tokenSymbol
+      convertSymbol: $convertSymbol
+      coinmarketcapApiKey: $coinmarketcapApiKey
+    ) {
+      success
+      tokenPrice
+      error {
+        message
+        place
+      }
+    }
+  }
+`;

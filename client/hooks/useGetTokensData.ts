@@ -1,12 +1,15 @@
 import { useState } from 'react';
 
-import { GET_TOKEN_IMAGE } from '@/graphql/queries';
+import { GET_TOKEN_CONVERTED_PRICE, GET_TOKEN_IMAGE } from '@/graphql/queries';
 import client from '@/graphql/client';
-import { ITokenImages } from '@/types';
+import { ITokenImages, ITokenPrices } from '@/types';
 
-export const useGetTokenLogosPaths = (coinmarketcapApiKey: string) => {
-  const [isLoading, setLoading] = useState<boolean>(false);
+export const useGetTokensData = (coinmarketcapApiKey: string) => {
+  const [isImagesLoading, setImagesLoading] = useState<boolean>(false);
+  const [isPricesLoading, setPricesLoading] = useState<boolean>(false);
+
   const [tokenImages, setTokenImages] = useState<ITokenImages | null>(null);
+  const [tokenPrices, setTokenPrices] = useState<ITokenPrices | null>(null);
 
   const fetchTokenImageFromServer = async (tokenSymbol: string) => {
     try {
@@ -14,14 +17,14 @@ export const useGetTokenLogosPaths = (coinmarketcapApiKey: string) => {
         query: GET_TOKEN_IMAGE,
         variables: { tokenSymbol, coinmarketcapApiKey },
       });
-
       const data = response.data.tokenImage;
 
       if (data.success) {
         return { token: tokenSymbol, image: data.imageUrl };
       }
-    } catch (error) {}
-    return null;
+    } catch (error) {
+      return null;
+    }
   };
 
   const fetchTokenImageFromClient = async (tokenSymbol: string) => {
@@ -40,8 +43,27 @@ export const useGetTokenLogosPaths = (coinmarketcapApiKey: string) => {
     }
   };
 
+  const fetchTokenConvertedPrice = async (tokenSymbol: string, convertSymbol: string = 'USDT') => {
+    try {
+      const response = await client.query({
+        query: GET_TOKEN_CONVERTED_PRICE,
+        variables: { tokenSymbol, coinmarketcapApiKey, convertSymbol },
+      });
+
+      const data = response.data.tokenConvertedPrice;
+
+      if (data.success) {
+        return { token: tokenSymbol, price: data.tokenPrice };
+      } else {
+        return null;
+      }
+    } catch (error) {
+      return null;
+    }
+  };
+
   const getTokenImages = async (tokenSymbols: string[]) => {
-    setLoading(true);
+    setImagesLoading(true);
 
     tokenSymbols = tokenSymbols
       .map((tokenSymbol) => tokenSymbol.toUpperCase())
@@ -67,7 +89,9 @@ export const useGetTokenLogosPaths = (coinmarketcapApiKey: string) => {
     });
 
     try {
-      const results = await Promise.all(promises);
+      let results = await Promise.all(promises);
+
+      results = results.filter((result) => result !== null);
 
       results.forEach((result) => {
         if (result.image) {
@@ -85,9 +109,41 @@ export const useGetTokenLogosPaths = (coinmarketcapApiKey: string) => {
     } catch (error) {
       setTokenImages(tokenImagesFromSessionStorage);
     } finally {
-      setLoading(false);
+      setImagesLoading(false);
     }
   };
 
-  return { images: tokenImages, loading: isLoading, getImages: getTokenImages };
+  const getTokenPrices = async (tokenSymbols: string[]) => {
+    setPricesLoading(true);
+    tokenSymbols = tokenSymbols.map((tokenSymbol) => tokenSymbol.toUpperCase());
+
+    const promises = tokenSymbols.map((tokenSymbol) => {
+      return fetchTokenConvertedPrice(tokenSymbol);
+    });
+
+    try {
+      let results = await Promise.all(promises);
+
+      results = results.filter((result) => result !== null);
+
+      const combinedResult = results.reduce((accumulator: ITokenPrices, currentObject) => {
+        const { token, price } = currentObject;
+        accumulator[token] = price;
+        return accumulator;
+      }, {});
+      setTokenPrices(combinedResult);
+    } catch (error) {
+    } finally {
+      setPricesLoading(false);
+    }
+  };
+
+  return {
+    images: tokenImages,
+    prices: tokenPrices,
+    imagesLoading: isImagesLoading,
+    pricesLoading: isPricesLoading,
+    getImages: getTokenImages,
+    getPrices: getTokenPrices,
+  };
 };

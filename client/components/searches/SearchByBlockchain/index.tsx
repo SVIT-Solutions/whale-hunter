@@ -4,7 +4,7 @@ import { makeStyles } from '@mui/styles';
 import { LockOutlined, SearchOutlined } from '@mui/icons-material';
 
 import SearchRoot, { SearchRootProps } from '@/components/searches/SearchRoot';
-import { useGetTokenLogosPaths } from '@/hooks/useGetTokenLogosPaths';
+import { useGetTokensData } from '@/hooks/useGetTokensData';
 import TokenIconButton from '@/components/buttons/TokenIconButton';
 
 interface SearchByBlockchainProps extends SearchRootProps {
@@ -31,7 +31,7 @@ const SearchByBlockchain: FC<SearchByBlockchainProps> = ({
 
   const classes = useStyles();
 
-  const { images, getImages } = useGetTokenLogosPaths(coinmarketcapApiKey);
+  const { images, getImages } = useGetTokensData(coinmarketcapApiKey);
 
   useEffect(() => {
     getImages([tokenSymbol]);
