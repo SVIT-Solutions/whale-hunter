@@ -11,11 +11,13 @@ interface TokenImageProps {
 
 const TokenImage: FC<TokenImageProps> = ({ image, style, width = 20, height = 20, loading = false }) => {
   return (
-    <Box style={style}>
-      {loading || !image ? (
+    <Box style={style} height={height}>
+      {loading ? (
         <Skeleton height={`${height}px`} width={`${width}px`} variant='circular' />
-      ) : (
+      ) : image ? (
         <img style={{ borderRadius: '50%' }} height={`${height}px`} width={`${width}px`} src={image}></img>
+      ) : (
+        <div style={{ height: `${height}px`, width: `${width}px` }}></div>
       )}
     </Box>
   );

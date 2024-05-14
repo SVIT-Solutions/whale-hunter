@@ -33,6 +33,29 @@ const useStyles = makeStyles((theme: Theme) => ({
 const TableRoot: FC<TableRootProps> = ({ data }) => {
   const classes = useStyles();
 
+  const renderTableCellContent = (row, key: string) => {
+    const cellValue = row[key];
+
+    if (typeof cellValue === 'object') {
+      if (cellValue?.loading) {
+        return <Skeleton />;
+      }
+
+      if (cellValue.hasOwnProperty('image')) {
+        return (
+          <Box display='flex' alignItems='center'>
+            <TokenImage loading={cellValue?.imageLoading} image={cellValue?.image} style={{ marginRight: '5px' }} />
+            {cellValue?.value}
+          </Box>
+        );
+      }
+
+      return cellValue?.value;
+    }
+
+    return cellValue;
+  };
+
   return (
     <TableContainer component={Card} className={classes.root} style={{ overflow: data?.objects ? 'auto' : 'hidden' }}>
       <Table>
@@ -51,20 +74,7 @@ const TableRoot: FC<TableRootProps> = ({ data }) => {
                 <TableRow key={rowIndex}>
                   {Object.keys(row).map((key, cellIndex) => (
                     <TableCell key={`${rowIndex} ${cellIndex} ${key}`} style={{ width: '25%' }}>
-                      {typeof row[key] === 'object' ? (
-                        row[key]?.loading ? (
-                          <Skeleton />
-                        ) : row[key].hasOwnProperty('image') ? (
-                          <Box display='flex'>
-                            <TokenImage image={row[key].image} style={{ marginRight: '5px' }} />
-                            {row[key].value}
-                          </Box>
-                        ) : (
-                          row[key].value
-                        )
-                      ) : (
-                        row[key]
-                      )}
+                      {renderTableCellContent(row, key)}
                     </TableCell>
                   ))}
                 </TableRow>

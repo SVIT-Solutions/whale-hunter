@@ -204,6 +204,7 @@ SUPPORT_EMAIL = config('SUPPORT_EMAIL')
 
 
 # Celery
+REDIS_HOST = config('REDIS_HOST')
 REDIS_PORT = config('REDIS_PORT')
 
 CELERY_BROKER_URL = f'redis://redis:{REDIS_PORT}/0'
@@ -213,3 +214,13 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f'redis://{REDIS_HOST}:{REDIS_PORT}/1',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}

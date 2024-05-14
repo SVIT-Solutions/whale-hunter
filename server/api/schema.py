@@ -124,7 +124,7 @@ class Query(graphene.ObjectType):
         if not api_key:
             return create_error_response(message=api_key_error, place="api_key")
 
-        token_price = fetch_token_converted_price_value(token_symbol=token_symbol, convert_symbol=convert_symbol, api_key=api_key)
+        token_price = cached_fetch_token_converted_price_value(token_symbol=token_symbol, convert_symbol=convert_symbol, api_key=api_key)
 
         if token_price is None:
             return create_error_response(message='Could not find the token price', place='token_price')
@@ -192,7 +192,7 @@ class Query(graphene.ObjectType):
         if not api_key:
             return create_error_response(message=api_key_error, place="api_key")
 
-        image_url = fetch_token_image_url(token_symbol=token_symbol, api_key=api_key)
+        image_url = cached_fetch_token_image_url(token_symbol=token_symbol, api_key=api_key)
 
         if not image_url:
             return create_error_response(message='Failed to fetch token image', place='image_url')

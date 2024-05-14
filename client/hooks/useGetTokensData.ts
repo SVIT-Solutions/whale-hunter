@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { GET_TOKEN_CONVERTED_PRICE, GET_TOKEN_IMAGE } from '@/graphql/queries';
 import client from '@/graphql/client';
 import { ITokenImages, ITokenPrices } from '@/types';
+import { TokenImagesEnum } from '@/constants/tokens';
 
 export const useGetTokensData = (coinmarketcapApiKey: string) => {
   const [isImagesLoading, setImagesLoading] = useState<boolean>(false);
@@ -25,22 +26,7 @@ export const useGetTokensData = (coinmarketcapApiKey: string) => {
     } catch (error) {
       return null;
     }
-  };
-
-  const fetchTokenImageFromClient = async (tokenSymbol: string) => {
-    const tokenLocalPath = `/icons/tokens/${tokenSymbol}.logo.svg`;
-
-    try {
-      const response = await fetch(`..${tokenLocalPath}`);
-
-      if (response.ok) {
-        return { token: tokenSymbol, image: tokenLocalPath };
-      } else {
-        return await fetchTokenImageFromServer(tokenSymbol);
-      }
-    } catch (error) {
-      return await fetchTokenImageFromServer(tokenSymbol);
-    }
+    return null;
   };
 
   const fetchTokenConvertedPrice = async (tokenSymbol: string, convertSymbol: string = 'USDT') => {
@@ -85,7 +71,10 @@ export const useGetTokensData = (coinmarketcapApiKey: string) => {
 
     // Fetch unavailable token images
     const promises = tokenSymbols.map((tokenSymbol) => {
-      return fetchTokenImageFromClient(tokenSymbol);
+      if (tokenSymbol in TokenImagesEnum) {
+        return { token: tokenSymbol, image: TokenImagesEnum[tokenSymbol] };
+      }
+      return fetchTokenImageFromServer(tokenSymbol);
     });
 
     try {

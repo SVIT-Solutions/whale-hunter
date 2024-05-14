@@ -1,18 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Box,
-  Card,
-  CircularProgress,
-  Grid,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Theme,
-  Typography,
-} from '@mui/material';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Box, Card, Grid, Theme, Typography } from '@mui/material';
 import { makeStyles, useTheme } from '@mui/styles';
 
 import RoundedIconButton from '@/components/buttons/RoundedIconButton';
@@ -20,7 +7,6 @@ import HorizontalSeparator from '@/components/separators/HorizontalSeparator';
 import ButtonRoot from '@/components/buttons/ButtonRoot';
 import ResourcesLink from '@/components/links/ResourcesLink';
 import SearchByBlockchain from '@/components/searches/SearchByBlockchain';
-import TokenImage from '@/components/TokenImage';
 import XLogo from '@/assets/icons/X.logo';
 import GitHubLogo from '@/assets/icons/GitHub.logo';
 import InputRoot from '@/components/inputs/InputRoot';
@@ -29,8 +15,8 @@ import { GET_WALLET_DATA } from '@/graphql/queries';
 import { useGetTokensData } from '@/hooks/useGetTokensData';
 import { IWalletData } from '@/types';
 import TableRoot from '@/components/tables/TableRoot';
-import { useHeight } from '@/hooks/useHeight';
 import { useZoomLevel } from '@/hooks/useZoomLevel';
+import { formatNumber } from '@/utils';
 
 interface Props {
   children?: React.ReactNode;
@@ -104,6 +90,7 @@ const Home = ({ children }: Props) => {
 
   // Search handlers
   const handleBlockchainSearch = async (value: string) => {
+    setWalletData(null);
     if (value?.length === 42 && value.startsWith('0x')) {
       setIsLoading(true);
       try {
@@ -142,18 +129,20 @@ const Home = ({ children }: Props) => {
       const normalizedTokenSymbol = balance.symbol.toUpperCase();
 
       return {
-        token: { image: images?.[normalizedTokenSymbol], value: balance.symbol },
+        token: { image: images?.[normalizedTokenSymbol], imageLoading: imagesLoading, value: balance.symbol },
         price: {
-          value: prices?.[normalizedTokenSymbol] ? `$${prices?.[normalizedTokenSymbol]}` : '',
+          value: prices?.[normalizedTokenSymbol] ? `≈ $${prices?.[normalizedTokenSymbol]}` : '',
           loading: pricesLoading,
+          accessor: prices?.[normalizedTokenSymbol] || 0,
         },
-        balance: balance.balance,
+        balance: formatNumber(balance.balance),
         value: {
           value:
             prices?.[normalizedTokenSymbol] * balance.balance
-              ? `$${prices?.[normalizedTokenSymbol] * balance.balance}`
+              ? `≈ $${prices?.[normalizedTokenSymbol] * balance.balance}`
               : '',
           loading: pricesLoading,
+          accessor: prices?.[normalizedTokenSymbol] * balance.balance || 0,
         },
       };
     });
