@@ -36,15 +36,6 @@ const useStyles = makeStyles((theme: Theme) => ({
   apiKeysSettingsImage: {
     margin: '50px 0',
   },
-  tableContainer: {
-    height: '402.4px',
-    overflowY: 'auto',
-    padding: '0 15px 0 25px',
-    borderRadius: '10px',
-    borderWidth: '1px',
-    borderStyle: 'solid',
-    '& .MuiTableCell-root': { whiteSpace: 'nowrap', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis' },
-  },
 }));
 
 const Home = ({ children }: Props) => {
@@ -61,7 +52,7 @@ const Home = ({ children }: Props) => {
   const [coinmarketcapApiKeyError, setCoinmarketcapApiKeyError] = useState<boolean>(false);
   const [blockExplorerApiKeyError, setBlockExplorerApiKeyError] = useState<boolean>(false);
 
-  const { tokens, loading, getTokensData } = useGetTokensData(coinmarketcapApiKey);
+  const { tokens, getTokensData } = useGetTokensData(coinmarketcapApiKey);
 
   const [walletData, setWalletData] = useState<IWalletData | null>(null);
 
