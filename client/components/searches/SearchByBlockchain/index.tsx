@@ -31,10 +31,10 @@ const SearchByBlockchain: FC<SearchByBlockchainProps> = ({
 
   const classes = useStyles();
 
-  const { images, getImages } = useGetTokensData(coinmarketcapApiKey);
+  const { tokens, getTokensData } = useGetTokensData(coinmarketcapApiKey);
 
   useEffect(() => {
-    getImages([tokenSymbol]);
+    getTokensData([tokenSymbol], { images: true });
   }, [tokenSymbol]);
 
   return (
@@ -52,7 +52,7 @@ const SearchByBlockchain: FC<SearchByBlockchainProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                 }}
-                tokenLogoPath={images?.[tokenSymbol.toUpperCase()]}
+                tokenLogoPath={tokens?.[tokenSymbol.toUpperCase()]?.image}
               />
             </InputAdornment>
           ),

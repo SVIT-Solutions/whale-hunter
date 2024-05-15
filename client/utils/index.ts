@@ -39,3 +39,24 @@ export function formatNumber(value: number): string {
 
   return `${roundedValue}${prefix}`;
 }
+
+export const fetchWithRateLimit = async (
+  fetchFunction: () => Promise<any>,
+  values: any[],
+  rateLimit = 5,
+  interval = 1000
+) => {
+  const results = [];
+  for (let i = 0; i < values.length; i += rateLimit) {
+    const batch = [];
+    for (let j = i; j < i + rateLimit && j < values.length; j++) {
+      batch.push(fetchFunction(values[j]));
+    }
+    const batchResults = await Promise.all(batch);
+    results.push(...batchResults);
+    if (i + rateLimit < values.length) {
+      await new Promise((resolve) => setTimeout(resolve, interval));
+    }
+  }
+  return results;
+};

@@ -10,6 +10,15 @@ export interface ITokenPrices {
   [key: string]: number;
 }
 
+export interface ITokenData {
+  image?: string;
+  price?: number;
+}
+
+export interface IToken {
+  [key: string]: ITokenData;
+}
+
 export interface IWalletTransactions {
   fromAddress: string;
   toAddress: string;

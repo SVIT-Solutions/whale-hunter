@@ -2,15 +2,19 @@ import { useState } from 'react';
 
 import { GET_TOKEN_CONVERTED_PRICE, GET_TOKEN_IMAGE } from '@/graphql/queries';
 import client from '@/graphql/client';
-import { ITokenImages, ITokenPrices } from '@/types';
+import { IToken, ITokenImages, ITokenPrices } from '@/types';
 import { TokenImagesEnum } from '@/constants/tokens';
+import { fetchWithRateLimit } from '@/utils';
+
+interface IGetTokensDataOptions {
+  images?: boolean;
+  prices?: boolean;
+}
 
 export const useGetTokensData = (coinmarketcapApiKey: string) => {
-  const [isImagesLoading, setImagesLoading] = useState<boolean>(false);
-  const [isPricesLoading, setPricesLoading] = useState<boolean>(false);
+  const [isLoading, setLoading] = useState<boolean>(false);
 
-  const [tokenImages, setTokenImages] = useState<ITokenImages | null>(null);
-  const [tokenPrices, setTokenPrices] = useState<ITokenPrices | null>(null);
+  const [tokens, setTokens] = useState<IToken | null>(null);
 
   const fetchTokenImageFromServer = async (tokenSymbol: string) => {
     try {
@@ -49,11 +53,7 @@ export const useGetTokensData = (coinmarketcapApiKey: string) => {
   };
 
   const getTokenImages = async (tokenSymbols: string[]) => {
-    setImagesLoading(true);
-
-    tokenSymbols = tokenSymbols
-      .map((tokenSymbol) => tokenSymbol.toUpperCase())
-      .filter((tokenSymbol) => !tokenSymbol.includes(' '));
+    tokenSymbols = tokenSymbols.filter((tokenSymbol) => !tokenSymbol.includes(' '));
 
     tokenSymbols = [...new Set(tokenSymbols)];
 
@@ -94,24 +94,15 @@ export const useGetTokensData = (coinmarketcapApiKey: string) => {
         return accumulator;
       }, {});
 
-      setTokenImages({ ...tokenImagesFromSessionStorage, ...combinedResult });
+      return { ...tokenImagesFromSessionStorage, ...combinedResult };
     } catch (error) {
-      setTokenImages(tokenImagesFromSessionStorage);
-    } finally {
-      setImagesLoading(false);
+      return tokenImagesFromSessionStorage;
     }
   };
 
   const getTokenPrices = async (tokenSymbols: string[]) => {
-    setPricesLoading(true);
-    tokenSymbols = tokenSymbols.map((tokenSymbol) => tokenSymbol.toUpperCase());
-
-    const promises = tokenSymbols.map((tokenSymbol) => {
-      return fetchTokenConvertedPrice(tokenSymbol);
-    });
-
     try {
-      let results = await Promise.all(promises);
+      let results = await fetchWithRateLimit(fetchTokenConvertedPrice, tokenSymbols);
 
       results = results.filter((result) => result !== null);
 
@@ -120,19 +111,38 @@ export const useGetTokensData = (coinmarketcapApiKey: string) => {
         accumulator[token] = price;
         return accumulator;
       }, {});
-      setTokenPrices(combinedResult);
+
+      return combinedResult;
     } catch (error) {
-    } finally {
-      setPricesLoading(false);
+      return {};
     }
   };
 
+  const getTokensData = async (tokenSymbols: string[], options: IGetTokensDataOptions) => {
+    setLoading(true);
+
+    tokenSymbols = tokenSymbols.map((tokenSymbol) => tokenSymbol.toUpperCase());
+
+    const images = options?.images ? (await getTokenImages(tokenSymbols)) || {} : {};
+    const prices = options?.prices ? (await getTokenPrices(tokenSymbols)) || {} : {};
+
+    const mergedTokenData: IToken = {};
+
+    for (const key in images) {
+      mergedTokenData[key] = { image: images[key] };
+      if (prices[key] !== undefined) {
+        mergedTokenData[key].price = prices[key];
+      }
+    }
+
+    setTokens(mergedTokenData);
+
+    setLoading(false);
+  };
+
   return {
-    images: tokenImages,
-    prices: tokenPrices,
-    imagesLoading: isImagesLoading,
-    pricesLoading: isPricesLoading,
-    getImages: getTokenImages,
-    getPrices: getTokenPrices,
+    tokens: tokens,
+    loading: isLoading,
+    getTokensData: getTokensData,
   };
 };

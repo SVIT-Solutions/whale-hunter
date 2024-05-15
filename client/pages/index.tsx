@@ -61,17 +61,33 @@ const Home = ({ children }: Props) => {
   const [coinmarketcapApiKeyError, setCoinmarketcapApiKeyError] = useState<boolean>(false);
   const [blockExplorerApiKeyError, setBlockExplorerApiKeyError] = useState<boolean>(false);
 
-  const { images, prices, imagesLoading, pricesLoading, getImages, getPrices } = useGetTokensData(coinmarketcapApiKey);
+  const { tokens, loading, getTokensData } = useGetTokensData(coinmarketcapApiKey);
 
   const [walletData, setWalletData] = useState<IWalletData | null>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const isSearchDisabled = isLoading || coinmarketcapApiKey?.length < 32 || blockExplorerApiKey?.length < 32;
+  const isSearchDisabled = coinmarketcapApiKey?.length < 32 || blockExplorerApiKey?.length < 32;
 
   const searchPlaceholderText = isSearchDisabled
     ? 'Enter your api keys to start scanning'
     : 'Search by wallet or contract address';
+
+  // fetch requests
+  const fetchWalletData = async (walletAddress: string): Promise<IWalletData | null> => {
+    try {
+      const response = await client.query({
+        query: GET_WALLET_DATA,
+        variables: { walletAddress: walletAddress, network: 'eth', blockExplorerApiKey },
+      });
+      const data = response.data.wallet;
+      if (data.success) {
+        return { transactions: data.transactions, tokenBalances: data.tokenBalances };
+      }
+    } catch (error) {
+      return null;
+    }
+  };
 
   // API Keys Inputs change handlers
   const handleCoinmarketcapApiKeyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,23 +106,17 @@ const Home = ({ children }: Props) => {
 
   // Search handlers
   const handleBlockchainSearch = async (value: string) => {
+    setIsLoading(true);
     setWalletData(null);
     if (value?.length === 42 && value.startsWith('0x')) {
-      setIsLoading(true);
-      try {
-        const response = await client.query({
-          query: GET_WALLET_DATA,
-          variables: { walletAddress: value, network: 'eth', blockExplorerApiKey },
-        });
-        const data = response.data.wallet;
-        if (data.success) {
-          setWalletData({ transactions: data.transactions, tokenBalances: data.tokenBalances });
-        }
-      } finally {
-        setIsLoading(false);
-      }
+      const data = await fetchWalletData(value);
+      setWalletData(data);
+
+      const tokenSymbols = data.tokenBalances.map((balance) => balance.symbol);
+      await getTokensData(tokenSymbols, { images: true, prices: true });
     } else {
     }
+    setIsLoading(false);
   };
 
   const handleBlockchainSearchClick = () => {
@@ -127,36 +137,27 @@ const Home = ({ children }: Props) => {
 
     const objects = walletData.tokenBalances.map((balance) => {
       const normalizedTokenSymbol = balance.symbol.toUpperCase();
+      const tokenImage = tokens?.[normalizedTokenSymbol]?.image;
+      const tokenPrice = tokens?.[normalizedTokenSymbol]?.price;
 
       return {
-        token: { image: images?.[normalizedTokenSymbol], imageLoading: imagesLoading, value: balance.symbol },
+        token: { image: tokenImage, value: balance.symbol },
         price: {
-          value: prices?.[normalizedTokenSymbol] ? `≈ $${prices?.[normalizedTokenSymbol]}` : '',
-          loading: pricesLoading,
-          accessor: prices?.[normalizedTokenSymbol] || 0,
+          value: tokenPrice ? `≈ $${tokenPrice}` : '',
+          accessor: tokenPrice || 0,
         },
         balance: formatNumber(balance.balance),
         value: {
-          value:
-            prices?.[normalizedTokenSymbol] * balance.balance
-              ? `≈ $${prices?.[normalizedTokenSymbol] * balance.balance}`
-              : '',
-          loading: pricesLoading,
-          accessor: prices?.[normalizedTokenSymbol] * balance.balance || 0,
+          value: tokenPrice ? `≈ $${tokenPrice * balance.balance}` : '',
+          accessor: tokenPrice * balance.balance || 0,
         },
       };
     });
 
-    return { columns, objects };
-  }, [walletData, imagesLoading, pricesLoading]);
+    const sortedObjects = objects.sort((object) => (object.value.accessor ? -1 : 1));
 
-  useEffect(() => {
-    if (walletData) {
-      const tokenSymbols = walletData.tokenBalances.map((balance) => balance.symbol);
-      getImages(tokenSymbols);
-      getPrices(tokenSymbols);
-    }
-  }, [walletData]);
+    return { columns, objects: sortedObjects };
+  }, [walletData, isLoading]);
 
   return (
     <Grid className={classes.wrapper} container>
