@@ -40,17 +40,28 @@ export function formatNumber(value: number): string {
   return `${roundedValue}${prefix}`;
 }
 
-export const fetchWithRateLimit = async (
-  fetchFunction: () => Promise<any>,
-  values: any[],
+interface FetchWithRateLimitParams {
+  fetchFunction: () => Promise<any>;
+  values: any[];
+  valueKeyName: string;
+  mockVariables: object;
+  rateLimit?: number;
+  interval?: number;
+}
+
+export const fetchWithRateLimit = async ({
+  fetchFunction,
+  values,
+  valueKeyName,
+  mockVariables,
   rateLimit = 5,
-  interval = 1000
-) => {
+  interval = 1,
+}: FetchWithRateLimitParams) => {
   const results = [];
   for (let i = 0; i < values.length; i += rateLimit) {
     const batch = [];
     for (let j = i; j < i + rateLimit && j < values.length; j++) {
-      batch.push(fetchFunction(values[j]));
+      batch.push(fetchFunction({ ...mockVariables, [valueKeyName]: values[j] }));
     }
     const batchResults = await Promise.all(batch);
     results.push(...batchResults);

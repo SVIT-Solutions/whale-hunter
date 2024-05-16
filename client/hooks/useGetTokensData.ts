@@ -1,59 +1,25 @@
 import { useState } from 'react';
 
-import { GET_TOKEN_CONVERTED_PRICE, GET_TOKEN_IMAGE } from '@/graphql/queries';
+import { GET_TOKEN_IMAGE } from '@/graphql/queries';
 import client from '@/graphql/client';
-import { IToken, ITokenImages, ITokenPrices } from '@/types';
+import { ITokenImages, ITokenPrices } from '@/types';
 import { TokenImagesEnum } from '@/constants/tokens';
 import { fetchWithRateLimit } from '@/utils';
-
-interface IGetTokensDataOptions {
-  images?: boolean;
-  prices?: boolean;
-}
+import { fetchTokenConvertedPrice, fetchTokenImage } from '@/services/TokenService';
 
 export const useGetTokensData = (coinmarketcapApiKey: string) => {
-  const [isLoading, setLoading] = useState<boolean>(false);
+  const [isImagesLoading, setImagesLoading] = useState<boolean>(false);
+  const [isPricesLoading, setPricesLoading] = useState<boolean>(false);
 
-  const [tokens, setTokens] = useState<IToken | null>(null);
-
-  const fetchTokenImageFromServer = async (tokenSymbol: string) => {
-    try {
-      const response = await client.query({
-        query: GET_TOKEN_IMAGE,
-        variables: { tokenSymbol, coinmarketcapApiKey },
-      });
-      const data = response.data.tokenImage;
-
-      if (data.success) {
-        return { token: tokenSymbol, image: data.imageUrl };
-      }
-    } catch (error) {
-      return null;
-    }
-    return null;
-  };
-
-  const fetchTokenConvertedPrice = async (tokenSymbol: string, convertSymbol: string = 'USDT') => {
-    try {
-      const response = await client.query({
-        query: GET_TOKEN_CONVERTED_PRICE,
-        variables: { tokenSymbol, coinmarketcapApiKey, convertSymbol },
-      });
-
-      const data = response.data.tokenConvertedPrice;
-
-      if (data.success) {
-        return { token: tokenSymbol, price: data.tokenPrice };
-      } else {
-        return null;
-      }
-    } catch (error) {
-      return null;
-    }
-  };
+  const [images, setImages] = useState<ITokenImages | null>(null);
+  const [prices, setPrices] = useState<ITokenPrices | null>(null);
 
   const getTokenImages = async (tokenSymbols: string[]) => {
-    tokenSymbols = tokenSymbols.filter((tokenSymbol) => !tokenSymbol.includes(' '));
+    setImagesLoading(true);
+
+    tokenSymbols = tokenSymbols
+      .filter((tokenSymbol) => !tokenSymbol.includes(' '))
+      .map((symbol) => symbol.toUpperCase());
 
     tokenSymbols = [...new Set(tokenSymbols)];
 
@@ -74,7 +40,7 @@ export const useGetTokensData = (coinmarketcapApiKey: string) => {
       if (tokenSymbol in TokenImagesEnum) {
         return { token: tokenSymbol, image: TokenImagesEnum[tokenSymbol] };
       }
-      return fetchTokenImageFromServer(tokenSymbol);
+      return fetchTokenImage(tokenSymbol, coinmarketcapApiKey);
     });
 
     try {
@@ -94,15 +60,28 @@ export const useGetTokensData = (coinmarketcapApiKey: string) => {
         return accumulator;
       }, {});
 
-      return { ...tokenImagesFromSessionStorage, ...combinedResult };
+      return setImages({ ...tokenImagesFromSessionStorage, ...combinedResult });
     } catch (error) {
-      return tokenImagesFromSessionStorage;
+      setImages(tokenImagesFromSessionStorage);
+    } finally {
+      setImagesLoading(false);
     }
   };
 
   const getTokenPrices = async (tokenSymbols: string[]) => {
+    setPricesLoading(true);
+
+    tokenSymbols = tokenSymbols.map((symbol) => symbol.toUpperCase());
+
+    tokenSymbols = [...new Set(tokenSymbols)];
+
     try {
-      let results = await fetchWithRateLimit(fetchTokenConvertedPrice, tokenSymbols);
+      let results = await fetchWithRateLimit({
+        fetchFunction: fetchTokenConvertedPrice,
+        values: tokenSymbols,
+        valueKeyName: 'tokenSymbol',
+        mockVariables: { coinmarketcapApiKey },
+      });
 
       results = results.filter((result) => result !== null);
 
@@ -112,37 +91,20 @@ export const useGetTokensData = (coinmarketcapApiKey: string) => {
         return accumulator;
       }, {});
 
-      return combinedResult;
+      setPrices(combinedResult);
     } catch (error) {
-      return {};
+      setPrices({});
+    } finally {
+      setPricesLoading(false);
     }
-  };
-
-  const getTokensData = async (tokenSymbols: string[], options: IGetTokensDataOptions) => {
-    setLoading(true);
-
-    tokenSymbols = tokenSymbols.map((tokenSymbol) => tokenSymbol.toUpperCase());
-
-    const images = options?.images ? (await getTokenImages(tokenSymbols)) || {} : {};
-    const prices = options?.prices ? (await getTokenPrices(tokenSymbols)) || {} : {};
-
-    const mergedTokenData: IToken = {};
-
-    for (const key in images) {
-      mergedTokenData[key] = { image: images[key] };
-      if (prices[key] !== undefined) {
-        mergedTokenData[key].price = prices[key];
-      }
-    }
-
-    setTokens(mergedTokenData);
-
-    setLoading(false);
   };
 
   return {
-    tokens: tokens,
-    loading: isLoading,
-    getTokensData: getTokensData,
+    images,
+    prices,
+    pricesLoading: isPricesLoading,
+    imagessLoading: isImagesLoading,
+    getTokenImages,
+    getTokenPrices,
   };
 };

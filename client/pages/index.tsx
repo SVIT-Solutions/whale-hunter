@@ -17,6 +17,7 @@ import { IWalletData } from '@/types';
 import TableRoot from '@/components/tables/TableRoot';
 import { useZoomLevel } from '@/hooks/useZoomLevel';
 import { formatNumber } from '@/utils';
+import { fetchWalletData } from '@/services/WalletService';
 
 interface Props {
   children?: React.ReactNode;
@@ -52,7 +53,7 @@ const Home = ({ children }: Props) => {
   const [coinmarketcapApiKeyError, setCoinmarketcapApiKeyError] = useState<boolean>(false);
   const [blockExplorerApiKeyError, setBlockExplorerApiKeyError] = useState<boolean>(false);
 
-  const { tokens, getTokensData } = useGetTokensData(coinmarketcapApiKey);
+  const { prices, images, getTokenImages, getTokenPrices } = useGetTokensData(coinmarketcapApiKey);
 
   const [walletData, setWalletData] = useState<IWalletData | null>(null);
 
@@ -63,22 +64,6 @@ const Home = ({ children }: Props) => {
   const searchPlaceholderText = isSearchDisabled
     ? 'Enter your api keys to start scanning'
     : 'Search by wallet or contract address';
-
-  // fetch requests
-  const fetchWalletData = async (walletAddress: string): Promise<IWalletData | null> => {
-    try {
-      const response = await client.query({
-        query: GET_WALLET_DATA,
-        variables: { walletAddress: walletAddress, network: 'eth', blockExplorerApiKey },
-      });
-      const data = response.data.wallet;
-      if (data.success) {
-        return { transactions: data.transactions, tokenBalances: data.tokenBalances };
-      }
-    } catch (error) {
-      return null;
-    }
-  };
 
   // API Keys Inputs change handlers
   const handleCoinmarketcapApiKeyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,11 +85,12 @@ const Home = ({ children }: Props) => {
     setIsLoading(true);
     setWalletData(null);
     if (value?.length === 42 && value.startsWith('0x')) {
-      const data = await fetchWalletData(value);
+      const data = await fetchWalletData({ walletAddress: value, network: 'eth', blockExplorerApiKey });
       setWalletData(data);
 
       const tokenSymbols = data.tokenBalances.map((balance) => balance.symbol);
-      await getTokensData(tokenSymbols, { images: true, prices: true });
+      await getTokenImages(tokenSymbols);
+      await getTokenPrices(tokenSymbols);
     } else {
     }
     setIsLoading(false);
@@ -128,8 +114,8 @@ const Home = ({ children }: Props) => {
 
     const objects = walletData.tokenBalances.map((balance) => {
       const normalizedTokenSymbol = balance.symbol.toUpperCase();
-      const tokenImage = tokens?.[normalizedTokenSymbol]?.image;
-      const tokenPrice = tokens?.[normalizedTokenSymbol]?.price;
+      const tokenImage = images?.[normalizedTokenSymbol];
+      const tokenPrice = prices?.[normalizedTokenSymbol];
 
       return {
         token: { image: tokenImage, value: balance.symbol },
