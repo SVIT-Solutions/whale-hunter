@@ -29,7 +29,7 @@ export const GET_WALLET_DATA = gql`
         name
         symbol
         balance
-        contractAddress
+        tokenContractAddress
       }
       error {
         message

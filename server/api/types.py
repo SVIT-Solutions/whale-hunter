@@ -19,7 +19,7 @@ class TokenBalance(graphene.ObjectType):
     name = graphene.String()
     symbol = graphene.String()
     balance = graphene.Float()
-    contract_address = graphene.String()
+    token_contract_address = graphene.String()
 
 class TransactionType(graphene.ObjectType):
     from_address = graphene.String()

@@ -23,7 +23,7 @@ export interface IWalletTokenBalances {
   name: string;
   symbol: string;
   balance: number;
-  contractAddress: string | null;
+  tokenContractAddress: string | null;
 }
 
 export interface IWalletData {

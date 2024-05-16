@@ -45,7 +45,6 @@ class Query(graphene.ObjectType):
 
 
     def resolve_wallet(self, info, wallet_address, network, block_explorer_api_key=None):
-
         if block_explorer_api_key is not None:
             api_key = block_explorer_api_key
         else:

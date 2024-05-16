@@ -5,9 +5,9 @@ class Params:
 
     def get_fetch_wallet_transactions_params(self, wallet_address=None):
         return {
+            'module': 'account',
+            'action': 'tokentx',
             'apikey': self.api_key,
             'address': wallet_address,
             'sort': 'asc',
-            'module': 'account',
-            'action': 'tokentx'
         }
