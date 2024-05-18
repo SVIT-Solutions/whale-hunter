@@ -3,11 +3,13 @@ from django.shortcuts import get_object_or_404
 from graphql import GraphQLError
 from graphene_django.types import DjangoObjectType
 from django.utils.translation import gettext_lazy as _
+import asyncio
 
 from blockchains.models import Network
-from .utils import create_error_response
+from .utils import *
 from .functions import *
 from .types import *
+from .constants import cache_keys
 
 
 class Query(graphene.ObjectType):
@@ -19,8 +21,15 @@ class Query(graphene.ObjectType):
         block_explorer_api_key=graphene.String(required=False),
         description="Get wallet data"
     )
+    token_converted_prices = graphene.Field(
+        TokenConvertedPricesType,
+        token_symbols=graphene.List(graphene.String),
+        convert_symbol=graphene.String(default_value="USDT"),
+        coinmarketcap_api_key=graphene.String(required=False),
+        description="Get token converted Prices from Coinmarketcap API"
+    )
     token_converted_price = graphene.Field(
-        TokenPriceType, 
+        TokenConvertedPriceType, 
         token_symbol=graphene.String(required=True),
         convert_symbol=graphene.String(default_value="USDT"),
         coinmarketcap_api_key=graphene.String(required=False),
@@ -45,7 +54,6 @@ class Query(graphene.ObjectType):
 
 
     def resolve_wallet(self, info, wallet_address, network, block_explorer_api_key=None):
-
         if block_explorer_api_key is not None:
             api_key = block_explorer_api_key
         else:
@@ -82,17 +90,44 @@ class Query(graphene.ObjectType):
 
         # Receiving Transactions
         fetch_wallet_transactins_params = params_instance.get_fetch_wallet_transactions_params(wallet_address=wallet_address)
-        transactions, transactions_error = functions_instance.fetch_transactions(fetch_wallet_transactins_params)
+        transactions, transactions_error = functions_instance.fetch_data_by_params(params=fetch_wallet_transactins_params, error_message='No transaction data found in the response')
         if transactions is None:
            return create_error_response(message=transactions_error, place='transactions')
 
-        # Calculating Token Balances
-        token_balances, token_balances_error = functions_instance.calculate_token_balances(transactions)
-        if token_balances is None:
-            return create_error_response(message=token_balances_error, place='token_balances')
-
         # Formatting Transaction Data
         formated_transactions = functions_instance.format_transactions_data(transactions)
+
+        # Get Tokens Data from transactions
+        tokens_data, tokens_data_error = get_tokens_data_from_transactions(formated_transactions)
+        if tokens_data is None:
+            return create_error_response(message=tokens_data_error, place='tokens_data')
+
+        # Formatting contract_addresses for async_multiple_fetch_data_with_queue function
+        contract_addresses = [{"contract_address": key} for key, value in tokens_data.items()]
+
+        # Fetch token balances for each contract_adress
+        token_balances_dict = asyncio.run(
+            async_multiple_fetch_data_with_queue(
+                functions_instance.fetch_token_balance_by_contract_adress, contract_addresses, "contract_address", wallet_address=wallet_address, params_instance=params_instance
+            )
+        )
+
+        # Formatting Token Balances 
+        token_balances = []
+        for contract_address, data in tokens_data.items():
+            token_balance = token_balances_dict.get(contract_address, "")
+
+            if any(c.isdigit() or c == '.' for c in token_balance) and token_balance.count('.') <= 1:
+                balance = float(token_balance) / 10 ** data.get('decimal', 1)
+            else:
+                balance = -1
+
+            token_balances.append({
+                "name": data.get('name', ''),
+                "symbol": data.get('symbol', ''),
+                "balance": balance,
+                "contract_address": contract_address,
+            })
 
         response_data = {
             "success": True,
@@ -101,6 +136,44 @@ class Query(graphene.ObjectType):
         }
 
         return response_data
+
+
+    def resolve_token_converted_prices(self, info, token_symbols, convert_symbol, coinmarketcap_api_key=None):
+        success = False
+
+        if not token_symbols:
+            return create_error_response(message='Token symbols not provided', place='token_symbol')
+
+        if coinmarketcap_api_key is not None:
+            api_key = coinmarketcap_api_key
+        else:
+            # Check Authenticated
+            user = info.context.user
+            is_authenticated, authenticated_error = check_authenticated(user)
+            if not is_authenticated:
+                return create_error_response(message=authenticated_error, place="auth")
+
+            # Get Coinmarketcap API Key
+            api_key, api_key_error = get_api_key(user=user, key="coinmarketcap_api_key")
+
+        if not api_key:
+            return create_error_response(message=api_key_error, place="api_key")
+
+        requests_data = [{"token_symbol": symbol} for symbol in token_symbols]
+        token_prices_dict = asyncio.run(
+            async_multiple_fetch_data_with_queue(
+                fetch_token_converted_price_value, requests_data, "token_symbol", api_key=api_key, convert_symbol=convert_symbol
+            )
+        )
+        # cache_key_template = cache_keys["token_converted_price"]
+        # token_price = cached_fetch(cache_key_template, fetch_token_converted_price_value, 60, None, api_key=api_key, token_symbol=token_symbol, convert_symbol=convert_symbol)
+
+        if token_prices_dict is None:
+            return create_error_response(message='Could not find the token price', place='token_price')
+
+        token_prices = [{"symbol": key, "price": value} for key, value in token_prices_dict.items()]
+
+        return {'success': True, 'token_prices': token_prices}
 
 
     def resolve_token_converted_price(self, info, token_symbol, convert_symbol, coinmarketcap_api_key=None):
@@ -124,7 +197,8 @@ class Query(graphene.ObjectType):
         if not api_key:
             return create_error_response(message=api_key_error, place="api_key")
 
-        token_price = cached_fetch_token_converted_price_value(token_symbol=token_symbol, convert_symbol=convert_symbol, api_key=api_key)
+        cache_key_template = cache_keys["token_converted_price"]
+        token_price = cached_fetch(cache_key_template, fetch_token_converted_price_value, 60, None, api_key=api_key, token_symbol=token_symbol, convert_symbol=convert_symbol)
 
         if token_price is None:
             return create_error_response(message='Could not find the token price', place='token_price')
@@ -173,26 +247,26 @@ class Query(graphene.ObjectType):
 
 
     def resolve_token_image(self, info, token_symbol, coinmarketcap_api_key=None):
-
         if not token_symbol:
             return create_error_response(message='Token symbol not provided', place='token_symbol')
 
         if coinmarketcap_api_key is not None:
             api_key = coinmarketcap_api_key
         else:
-          # Check Authenticated
-          user = info.context.user
-          is_authenticated, authenticated_error = check_authenticated(user)
-          if not is_authenticated:
-              return create_error_response(message=authenticated_error, place="auth")
+            # Check Authenticated
+            user = info.context.user
+            is_authenticated, authenticated_error = check_authenticated(user)
+            if not is_authenticated:
+                return create_error_response(message=authenticated_error, place="auth")
 
-          # Get Coinmarketcap API Key
-          api_key, api_key_error = get_api_key(user=user, key="coinmarketcap_api_key")
+            # Get Coinmarketcap API Key
+            api_key, api_key_error = get_api_key(user=user, key="coinmarketcap_api_key")
 
         if not api_key:
             return create_error_response(message=api_key_error, place="api_key")
 
-        image_url = cached_fetch_token_image_url(token_symbol=token_symbol, api_key=api_key)
+        cache_key_template = cache_keys["token_image"]
+        image_url = cached_fetch(cache_key_template, fetch_token_image_url, 172800, 7200, api_key=api_key, token_symbol=token_symbol)
 
         if not image_url:
             return create_error_response(message='Failed to fetch token image', place='image_url')

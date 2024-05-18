@@ -20,14 +20,17 @@ class TokenBalance(graphene.ObjectType):
     symbol = graphene.String()
     balance = graphene.Float()
     contract_address = graphene.String()
+    decimal = graphene.Int()
 
 class TransactionType(graphene.ObjectType):
     from_address = graphene.String()
     to_address = graphene.String()
     value = graphene.String()
     tokenSymbol = graphene.String()
+    tokenDecimal = graphene.Int()
     tokenName = graphene.String()
     timeStamp = graphene.String()
+    contractAddress = graphene.String()
 
 class WalletType(graphene.ObjectType):
     success = graphene.Boolean()
@@ -56,6 +59,15 @@ class TokenPriceInfoType(graphene.ObjectType):
     percent_change_90d = graphene.Float()
 
 class TokenPriceType(graphene.ObjectType):
+    symbol = graphene.String()
+    price = graphene.Float()
+
+class TokenConvertedPricesType(graphene.ObjectType):
+    success = graphene.Boolean()
+    error = graphene.Field(ErrorType)
+    token_prices = graphene.List(TokenPriceType)
+
+class TokenConvertedPriceType(graphene.ObjectType):
     success = graphene.Boolean()
     error = graphene.Field(ErrorType)
     token_price = graphene.String()

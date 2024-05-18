@@ -10,15 +10,6 @@ export interface ITokenPrices {
   [key: string]: number;
 }
 
-export interface ITokenData {
-  image?: string;
-  price?: number;
-}
-
-export interface IToken {
-  [key: string]: ITokenData;
-}
-
 export interface IWalletTransactions {
   fromAddress: string;
   toAddress: string;
@@ -26,13 +17,14 @@ export interface IWalletTransactions {
   tokenSymbol: string;
   tokenName: string;
   timeStamp: string;
+  contractAddress: string;
 }
 
 export interface IWalletTokenBalances {
   name: string;
   symbol: string;
   balance: number;
-  contractAddress: string | null;
+  contractAddress: string;
 }
 
 export interface IWalletData {

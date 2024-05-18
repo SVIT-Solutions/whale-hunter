@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Box, Card, Grid, Theme, Typography } from '@mui/material';
 import { makeStyles, useTheme } from '@mui/styles';
 
@@ -10,13 +10,12 @@ import SearchByBlockchain from '@/components/searches/SearchByBlockchain';
 import XLogo from '@/assets/icons/X.logo';
 import GitHubLogo from '@/assets/icons/GitHub.logo';
 import InputRoot from '@/components/inputs/InputRoot';
-import { useApolloClient } from '@apollo/client';
-import { GET_WALLET_DATA } from '@/graphql/queries';
 import { useGetTokensData } from '@/hooks/useGetTokensData';
 import { IWalletData } from '@/types';
 import TableRoot from '@/components/tables/TableRoot';
 import { useZoomLevel } from '@/hooks/useZoomLevel';
 import { formatNumber } from '@/utils';
+import { fetchWalletData } from '@/services/WalletService';
 
 interface Props {
   children?: React.ReactNode;
@@ -42,8 +41,6 @@ const Home = ({ children }: Props) => {
   const classes = useStyles();
   const theme = useTheme<Theme>();
 
-  const client = useApolloClient();
-
   const zoomLevel = useZoomLevel();
 
   const [coinmarketcapApiKey, setCoinmarketcapApiKey] = useState<string>('');
@@ -52,7 +49,7 @@ const Home = ({ children }: Props) => {
   const [coinmarketcapApiKeyError, setCoinmarketcapApiKeyError] = useState<boolean>(false);
   const [blockExplorerApiKeyError, setBlockExplorerApiKeyError] = useState<boolean>(false);
 
-  const { tokens, getTokensData } = useGetTokensData(coinmarketcapApiKey);
+  const { prices, images, getTokenImages, getTokenPrices } = useGetTokensData(coinmarketcapApiKey);
 
   const [walletData, setWalletData] = useState<IWalletData | null>(null);
 
@@ -63,22 +60,6 @@ const Home = ({ children }: Props) => {
   const searchPlaceholderText = isSearchDisabled
     ? 'Enter your api keys to start scanning'
     : 'Search by wallet or contract address';
-
-  // fetch requests
-  const fetchWalletData = async (walletAddress: string): Promise<IWalletData | null> => {
-    try {
-      const response = await client.query({
-        query: GET_WALLET_DATA,
-        variables: { walletAddress: walletAddress, network: 'eth', blockExplorerApiKey },
-      });
-      const data = response.data.wallet;
-      if (data.success) {
-        return { transactions: data.transactions, tokenBalances: data.tokenBalances };
-      }
-    } catch (error) {
-      return null;
-    }
-  };
 
   // API Keys Inputs change handlers
   const handleCoinmarketcapApiKeyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,11 +81,13 @@ const Home = ({ children }: Props) => {
     setIsLoading(true);
     setWalletData(null);
     if (value?.length === 42 && value.startsWith('0x')) {
-      const data = await fetchWalletData(value);
+      const data = await fetchWalletData({ walletAddress: value, network: 'eth', blockExplorerApiKey });
+      data.tokenBalances = data.tokenBalances.filter((token) => token.balance);
       setWalletData(data);
 
       const tokenSymbols = data.tokenBalances.map((balance) => balance.symbol);
-      await getTokensData(tokenSymbols, { images: true, prices: true });
+      await getTokenImages(tokenSymbols);
+      await getTokenPrices(tokenSymbols);
     } else {
     }
     setIsLoading(false);
@@ -128,8 +111,17 @@ const Home = ({ children }: Props) => {
 
     const objects = walletData.tokenBalances.map((balance) => {
       const normalizedTokenSymbol = balance.symbol.toUpperCase();
-      const tokenImage = tokens?.[normalizedTokenSymbol]?.image;
-      const tokenPrice = tokens?.[normalizedTokenSymbol]?.price;
+      const tokenImage = images?.[normalizedTokenSymbol];
+      const tokenPrice = prices?.[normalizedTokenSymbol];
+      let tokenBalance;
+      let totalValue;
+      if (balance.balance < 0) {
+        tokenBalance = "Couldn't get";
+        totalValue = 0;
+      } else {
+        tokenBalance = formatNumber(balance.balance);
+        totalValue = tokenPrice * balance.balance;
+      }
 
       return {
         token: { image: tokenImage, value: balance.symbol },
@@ -137,15 +129,15 @@ const Home = ({ children }: Props) => {
           value: tokenPrice ? `≈ $${tokenPrice}` : '',
           accessor: tokenPrice || 0,
         },
-        balance: formatNumber(balance.balance),
+        balance: tokenBalance,
         value: {
-          value: tokenPrice ? `≈ $${tokenPrice * balance.balance}` : '',
-          accessor: tokenPrice * balance.balance || 0,
+          value: tokenPrice ? `≈ $${totalValue}` : '',
+          accessor: totalValue || 0,
         },
       };
     });
 
-    const sortedObjects = objects.sort((object) => (object.value.accessor ? -1 : 1));
+    const sortedObjects = objects.sort((object) => (object?.value?.accessor ? -1 : 1));
 
     return { columns, objects: sortedObjects };
   }, [walletData, isLoading]);
