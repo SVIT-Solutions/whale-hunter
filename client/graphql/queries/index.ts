@@ -24,12 +24,13 @@ export const GET_WALLET_DATA = gql`
         tokenSymbol
         tokenName
         timeStamp
+        contractAddress
       }
       tokenBalances {
         name
         symbol
         balance
-        tokenContractAddress
+        contractAddress
       }
       error {
         message

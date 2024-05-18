@@ -18,7 +18,7 @@ class Functions:
         return True
 
 
-    def fetch_transactions(self, params):
+    def fetch_data_by_params(self, params, error_message):
         if params is None:
             return None, None, 'Request params not provided'
 
@@ -32,39 +32,19 @@ class Functions:
                 if 'result' in data:
                     return data['result'], None
                 else:
-                    return None, None, 'No transaction data found in the response'
+                    return None, None, error_message
             else:
                 return None, None, f'Failed to fetch data from Etherscan API. Status code: {response.status_code}'
         except Exception as e:
             return None, None, str(e)
 
 
-    @staticmethod
-    def calculate_token_balances(transactions):
-        token_balances_dict = {}
-        for tx in transactions:
-            token_contract_address = tx.get('contractAddress', '')
-            token_balance = float(tx.get('value', 0)) / (10 ** int(tx.get('tokenDecimal', 0)))
-            token_name = tx.get('tokenName', '')
-            token_symbol = tx.get('tokenSymbol', '')
-            if token_contract_address:
-                if token_contract_address not in token_balances_dict:
-                    token_balances_dict[token_contract_address] = {'name': token_name, "symbol": token_symbol, 'balance': 0}
-                token_balances_dict[token_contract_address]['balance'] += token_balance
-
-        token_balances = []
-        for address, data in token_balances_dict.items():
-            token_balance_data = {
-                'token_contract_address': address,
-                'name': data['name'],
-                'symbol': data['symbol'],
-                'balance': data['balance']
-            }
-            token_balances.append(token_balance_data)
-        if token_balances:
-            return token_balances, None
-        else:
-            return None, 'Failed to get token balances'
+    def fetch_token_balance_by_contract_adress(self, wallet_address, contract_address, params_instance):
+        fetch_wallet_token_balance_params = params_instance.get_fetch_wallet_token_balance_params(
+                wallet_address=wallet_address, contract_address=contract_address)
+        token_balance, token_balance_error = self.fetch_data_by_params(
+                params=fetch_wallet_token_balance_params, error_message='No transaction data found in the response')
+        return token_balance
 
 
     @staticmethod
@@ -74,6 +54,8 @@ class Functions:
             'to_address': transaction.get('to'),
             'value': transaction.get('value'),
             'tokenSymbol': transaction.get('tokenSymbol'),
+            'tokenDecimal': int(transaction.get('tokenDecimal', 1)),
+            'contractAddress': transaction.get('contractAddress'),
             'tokenName': transaction.get('tokenName'),
             'timeStamp': transaction.get('timeStamp')
         } for transaction in transactions]

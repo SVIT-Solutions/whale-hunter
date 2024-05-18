@@ -4,6 +4,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from accounts.models import UserAPIKeys
 from blockchains.models import Network
 from django.core.cache import cache
+import asyncio
+import time
 
 
 # Coinmarketcap API
@@ -138,3 +140,50 @@ def get_functions_module(folder=None, network=None):
         return None, f"Network {network} temporarily unavailable"
     except ObjectDoesNotExist:
         return None, f"Network {network} not supported"
+
+
+async def async_fetch_with_semaphore(semaphore, func, *args, **kwargs):
+    async with semaphore:
+        result = await asyncio.to_thread(func, *args, **kwargs)
+        await asyncio.sleep(0.5)
+        return result
+
+
+# Blockchain functions
+def get_tokens_data_from_transactions(transactions):
+    tokens_data_dict = {}
+
+    try:
+        for tx in transactions:
+            token_contract_address = tx.get('contractAddress', '')
+            token_name = tx.get('tokenName', '')
+            token_symbol = tx.get('tokenSymbol', '')
+            token_decimal = tx.get('tokenDecimal', 1)
+            if token_contract_address:
+                if token_contract_address not in tokens_data_dict:
+                    tokens_data_dict[token_contract_address] = {
+                        "name": token_name,
+                        "symbol": token_symbol,
+                        "decimal": token_decimal,
+                    }
+        return tokens_data_dict, None
+    except Exception as e:
+        return None, 'Failed to get tokens data from transactions'
+
+
+async def async_fetch_token_balances_by_contract_adresses(wallet_address=None, contract_addresses=None, functions_instance=None, params_instance=None):
+    token_balances_dict = {}
+
+    semaphore = asyncio.Semaphore(5) 
+
+    tasks = [
+        async_fetch_with_semaphore(semaphore, functions_instance.fetch_token_balance_by_contract_adress, wallet_address, contract_address, params_instance)
+        for contract_address in contract_addresses
+    ]
+
+    balances = await asyncio.gather(*tasks)
+
+    for contract_address, balance in zip(contract_addresses, balances):
+        token_balances_dict[contract_address] = balance
+
+    return token_balances_dict

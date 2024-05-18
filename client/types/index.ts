@@ -17,13 +17,14 @@ export interface IWalletTransactions {
   tokenSymbol: string;
   tokenName: string;
   timeStamp: string;
+  contractAddress: string;
 }
 
 export interface IWalletTokenBalances {
   name: string;
   symbol: string;
   balance: number;
-  tokenContractAddress: string | null;
+  contractAddress: string;
 }
 
 export interface IWalletData {

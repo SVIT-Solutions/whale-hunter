@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from graphql import GraphQLError
 from graphene_django.types import DjangoObjectType
 from django.utils.translation import gettext_lazy as _
+import asyncio
 
 from blockchains.models import Network
 from .utils import create_error_response
@@ -81,17 +82,40 @@ class Query(graphene.ObjectType):
 
         # Receiving Transactions
         fetch_wallet_transactins_params = params_instance.get_fetch_wallet_transactions_params(wallet_address=wallet_address)
-        transactions, transactions_error = functions_instance.fetch_transactions(fetch_wallet_transactins_params)
+        transactions, transactions_error = functions_instance.fetch_data_by_params(params=fetch_wallet_transactins_params, error_message='No transaction data found in the response')
         if transactions is None:
            return create_error_response(message=transactions_error, place='transactions')
 
-        # Calculating Token Balances
-        token_balances, token_balances_error = functions_instance.calculate_token_balances(transactions)
-        if token_balances is None:
-            return create_error_response(message=token_balances_error, place='token_balances')
-
         # Formatting Transaction Data
         formated_transactions = functions_instance.format_transactions_data(transactions)
+
+        # Get Tokens Data from transactions
+        tokens_data, tokens_data_error = get_tokens_data_from_transactions(formated_transactions)
+        if tokens_data is None:
+            return create_error_response(message=tokens_data_error, place='tokens_data')
+
+        contract_addresses = list(tokens_data.keys())
+        token_contracts_address_balances_dict = asyncio.run(
+            async_fetch_token_balances_by_contract_adresses(
+                wallet_address=wallet_address, contract_addresses=contract_addresses, functions_instance=functions_instance, params_instance=params_instance
+            )
+        )
+
+        token_balances = []
+        for contract_address, data in tokens_data.items():
+            token_balance = token_contracts_address_balances_dict.get(contract_address, "")
+
+            if any(c.isdigit() or c == '.' for c in token_balance) and token_balance.count('.') <= 1:
+                balance = float(token_balance) / 10 ** data.get('decimal', 1)
+            else:
+                balance = -1
+
+            token_balances.append({
+                "name": data.get('name', ''),
+                "symbol": data.get('symbol', ''),
+                "balance": balance,
+                "contract_address": contract_address,
+            })
 
         response_data = {
             "success": True,
@@ -172,21 +196,20 @@ class Query(graphene.ObjectType):
 
 
     def resolve_token_image(self, info, token_symbol, coinmarketcap_api_key=None):
-
         if not token_symbol:
             return create_error_response(message='Token symbol not provided', place='token_symbol')
 
         if coinmarketcap_api_key is not None:
             api_key = coinmarketcap_api_key
         else:
-          # Check Authenticated
-          user = info.context.user
-          is_authenticated, authenticated_error = check_authenticated(user)
-          if not is_authenticated:
-              return create_error_response(message=authenticated_error, place="auth")
+            # Check Authenticated
+            user = info.context.user
+            is_authenticated, authenticated_error = check_authenticated(user)
+            if not is_authenticated:
+                return create_error_response(message=authenticated_error, place="auth")
 
-          # Get Coinmarketcap API Key
-          api_key, api_key_error = get_api_key(user=user, key="coinmarketcap_api_key")
+            # Get Coinmarketcap API Key
+            api_key, api_key_error = get_api_key(user=user, key="coinmarketcap_api_key")
 
         if not api_key:
             return create_error_response(message=api_key_error, place="api_key")

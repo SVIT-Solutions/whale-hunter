@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Box, Card, Grid, Theme, Typography } from '@mui/material';
 import { makeStyles, useTheme } from '@mui/styles';
 
@@ -10,8 +10,6 @@ import SearchByBlockchain from '@/components/searches/SearchByBlockchain';
 import XLogo from '@/assets/icons/X.logo';
 import GitHubLogo from '@/assets/icons/GitHub.logo';
 import InputRoot from '@/components/inputs/InputRoot';
-import { useApolloClient } from '@apollo/client';
-import { GET_WALLET_DATA } from '@/graphql/queries';
 import { useGetTokensData } from '@/hooks/useGetTokensData';
 import { IWalletData } from '@/types';
 import TableRoot from '@/components/tables/TableRoot';
@@ -42,8 +40,6 @@ const useStyles = makeStyles((theme: Theme) => ({
 const Home = ({ children }: Props) => {
   const classes = useStyles();
   const theme = useTheme<Theme>();
-
-  const client = useApolloClient();
 
   const zoomLevel = useZoomLevel();
 
@@ -86,6 +82,7 @@ const Home = ({ children }: Props) => {
     setWalletData(null);
     if (value?.length === 42 && value.startsWith('0x')) {
       const data = await fetchWalletData({ walletAddress: value, network: 'eth', blockExplorerApiKey });
+      data.tokenBalances = data.tokenBalances.filter((token) => token.balance);
       setWalletData(data);
 
       const tokenSymbols = data.tokenBalances.map((balance) => balance.symbol);
@@ -116,6 +113,15 @@ const Home = ({ children }: Props) => {
       const normalizedTokenSymbol = balance.symbol.toUpperCase();
       const tokenImage = images?.[normalizedTokenSymbol];
       const tokenPrice = prices?.[normalizedTokenSymbol];
+      let tokenBalance;
+      let totalValue;
+      if (balance.balance < 0) {
+        tokenBalance = "Couldn't get";
+        totalValue = 0;
+      } else {
+        tokenBalance = formatNumber(balance.balance);
+        totalValue = tokenPrice * balance.balance;
+      }
 
       return {
         token: { image: tokenImage, value: balance.symbol },
@@ -123,15 +129,15 @@ const Home = ({ children }: Props) => {
           value: tokenPrice ? `≈ $${tokenPrice}` : '',
           accessor: tokenPrice || 0,
         },
-        balance: formatNumber(balance.balance),
+        balance: tokenBalance,
         value: {
-          value: tokenPrice ? `≈ $${tokenPrice * balance.balance}` : '',
-          accessor: tokenPrice * balance.balance || 0,
+          value: tokenPrice ? `≈ $${totalValue}` : '',
+          accessor: totalValue || 0,
         },
       };
     });
 
-    const sortedObjects = objects.sort((object) => (object.value.accessor ? -1 : 1));
+    const sortedObjects = objects.sort((object) => (object?.value?.accessor ? -1 : 1));
 
     return { columns, objects: sortedObjects };
   }, [walletData, isLoading]);

@@ -11,3 +11,14 @@ class Params:
             'address': wallet_address,
             'sort': 'asc',
         }
+
+
+    def get_fetch_wallet_token_balance_params(self, wallet_address=None, contract_address=None):
+        return {
+            'module': 'account',
+            'action': 'tokenbalance',
+            'apikey': self.api_key,
+            'address': wallet_address,
+            'contractaddress': contract_address,
+            'sort': 'asc',
+        }

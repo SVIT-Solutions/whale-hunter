@@ -19,15 +19,18 @@ class TokenBalance(graphene.ObjectType):
     name = graphene.String()
     symbol = graphene.String()
     balance = graphene.Float()
-    token_contract_address = graphene.String()
+    contract_address = graphene.String()
+    decimal = graphene.Int()
 
 class TransactionType(graphene.ObjectType):
     from_address = graphene.String()
     to_address = graphene.String()
     value = graphene.String()
     tokenSymbol = graphene.String()
+    tokenDecimal = graphene.Int()
     tokenName = graphene.String()
     timeStamp = graphene.String()
+    contractAddress = graphene.String()
 
 class WalletType(graphene.ObjectType):
     success = graphene.Boolean()
