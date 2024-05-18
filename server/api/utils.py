@@ -71,3 +71,22 @@ async def async_fetch_with_semaphore(semaphore, func, *args, **kwargs):
         result = await asyncio.to_thread(func, *args, **kwargs)
         await asyncio.sleep(0.5)
         return result
+
+
+async def async_multiple_fetch_data_with_queue(func, requests_data, response_key, semaphore_limit=5, *args, **kwargs):
+    result_dict = {}
+
+    semaphore = asyncio.Semaphore(semaphore_limit) 
+
+    tasks = [
+        async_fetch_with_semaphore(semaphore, func, *args, **{**kwargs, **data})
+        for data in requests_data
+    ]
+
+    responses = await asyncio.gather(*tasks)
+
+    for index, data in enumerate(requests_data):
+        contract_address = data['contract_address']
+        result_dict[contract_address] = responses[index]
+
+    return result_dict

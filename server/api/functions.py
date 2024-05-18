@@ -1,5 +1,6 @@
 import requests
 import asyncio
+from .utils import async_fetch_with_semaphore
 
 
 # Coinmarketcap API
@@ -93,21 +94,3 @@ def get_tokens_data_from_transactions(transactions):
         return tokens_data_dict, None
     except Exception as e:
         return None, 'Failed to get tokens data from transactions'
-
-
-async def async_fetch_token_balances_by_contract_adresses(wallet_address=None, contract_addresses=None, functions_instance=None, params_instance=None):
-    token_balances_dict = {}
-
-    semaphore = asyncio.Semaphore(5) 
-
-    tasks = [
-        async_fetch_with_semaphore(semaphore, functions_instance.fetch_token_balance_by_contract_adress, wallet_address, contract_address, params_instance)
-        for contract_address in contract_addresses
-    ]
-
-    balances = await asyncio.gather(*tasks)
-
-    for contract_address, balance in zip(contract_addresses, balances):
-        token_balances_dict[contract_address] = balance
-
-    return token_balances_dict

@@ -39,7 +39,7 @@ class Functions:
             return None, None, str(e)
 
 
-    def fetch_token_balance_by_contract_adress(self, wallet_address, contract_address, params_instance):
+    def fetch_token_balance_by_contract_adress(self, contract_address=None, wallet_address=None, params_instance=None):
         fetch_wallet_token_balance_params = params_instance.get_fetch_wallet_token_balance_params(
                 wallet_address=wallet_address, contract_address=contract_address)
         token_balance, token_balance_error = self.fetch_data_by_params(

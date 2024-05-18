@@ -95,16 +95,20 @@ class Query(graphene.ObjectType):
         if tokens_data is None:
             return create_error_response(message=tokens_data_error, place='tokens_data')
 
-        contract_addresses = list(tokens_data.keys())
-        token_contracts_address_balances_dict = asyncio.run(
-            async_fetch_token_balances_by_contract_adresses(
-                wallet_address=wallet_address, contract_addresses=contract_addresses, functions_instance=functions_instance, params_instance=params_instance
+        # Formatting contract_addresses for async_multiple_fetch_data_with_queue function
+        contract_addresses = [{"contract_address": key} for key, value in tokens_data.items()]
+
+        # Fetch token balances for each contract_adress
+        token_balances_dict = asyncio.run(
+            async_multiple_fetch_data_with_queue(
+                functions_instance.fetch_token_balance_by_contract_adress, contract_addresses, "contract_address", wallet_address=wallet_address, params_instance=params_instance
             )
         )
 
+        # Formatting Token Balances 
         token_balances = []
         for contract_address, data in tokens_data.items():
-            token_balance = token_contracts_address_balances_dict.get(contract_address, "")
+            token_balance = token_balances_dict.get(contract_address, "")
 
             if any(c.isdigit() or c == '.' for c in token_balance) and token_balance.count('.') <= 1:
                 balance = float(token_balance) / 10 ** data.get('decimal', 1)
