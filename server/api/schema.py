@@ -6,9 +6,10 @@ from django.utils.translation import gettext_lazy as _
 import asyncio
 
 from blockchains.models import Network
-from .utils import create_error_response
+from .utils import *
 from .functions import *
 from .types import *
+from .constants import cache_keys
 
 
 class Query(graphene.ObjectType):
@@ -147,7 +148,8 @@ class Query(graphene.ObjectType):
         if not api_key:
             return create_error_response(message=api_key_error, place="api_key")
 
-        token_price = cached_fetch_token_converted_price_value(token_symbol=token_symbol, convert_symbol=convert_symbol, api_key=api_key)
+        cache_key_template = cache_keys["token_converted_price"]
+        token_price = cached_fetch(cache_key_template, fetch_token_converted_price_value, 60, None, api_key=api_key, token_symbol=token_symbol, convert_symbol=convert_symbol)
 
         if token_price is None:
             return create_error_response(message='Could not find the token price', place='token_price')
@@ -214,7 +216,8 @@ class Query(graphene.ObjectType):
         if not api_key:
             return create_error_response(message=api_key_error, place="api_key")
 
-        image_url = cached_fetch_token_image_url(token_symbol=token_symbol, api_key=api_key)
+        cache_key_template = cache_keys["token_image"]
+        image_url = cached_fetch(cache_key_template, fetch_token_image_url, 172800, 7200, api_key=api_key, token_symbol=token_symbol)
 
         if not image_url:
             return create_error_response(message='Failed to fetch token image', place='image_url')

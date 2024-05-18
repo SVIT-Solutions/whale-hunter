@@ -1,11 +1,5 @@
 import requests
-from graphql import GraphQLError
-from django.core.exceptions import ObjectDoesNotExist
-from accounts.models import UserAPIKeys
-from blockchains.models import Network
-from django.core.cache import cache
 import asyncio
-import time
 
 
 # Coinmarketcap API
@@ -77,76 +71,6 @@ def fetch_token_image_url(token_symbol=None, api_key=None):
             return None
     except Exception as e:
         return None
-
-
-# Cached Coinmarketcap API
-def cached_fetch_token_image_url(token_symbol, api_key):
-    cache_key = f"token_image:{token_symbol}"
-    cached_image_url = cache.get(cache_key)
-
-    if cached_image_url is not None:
-        return cached_image_url
-    else:
-        image_url = fetch_token_image_url(token_symbol, api_key)
-        if image_url is None:
-            cache.set(cache_key, image_url, timeout=3600)
-            return None
-        cache.set(cache_key, image_url, timeout=86400)
-        return image_url
-
-
-def cached_fetch_token_converted_price_value(token_symbol=None, convert_symbol="USDT", api_key=None):
-    cache_key = f"token_converted_price:{token_symbol}:{convert_symbol}"
-    cached_token_price = cache.get(cache_key)
-
-    if cached_token_price is not None:
-        return cached_token_price
-    else:
-        token_price = fetch_token_converted_price_value(token_symbol, convert_symbol, api_key)
-        if token_price is None:
-            return None
-        cache.set(cache_key, token_price, timeout=60)
-        return token_price
-
-
-# API Functions
-def check_authenticated(user):
-    if not user.is_authenticated:
-        return False, 'User is not authenticated'
-    return True, None
-
-
-def get_api_key(user, key):
-    try:
-        user_api_keys = UserAPIKeys.objects.get(user=user)
-    except UserAPIKeys.DoesNotExist:
-        return None, 'API Key not specified'
-
-    api_key = getattr(user_api_keys, key, None)
-
-    if not api_key:
-        return None, 'API Key not specified'
-
-    return api_key, None
-
-
-def get_functions_module(folder=None, network=None):
-    try:
-        network = network.lower()
-        Network.objects.get(abbreviation__iexact=network)
-        functions_module = __import__(f"blockchains.{folder}.{network}", fromlist=["*"])
-        return functions_module, None
-    except ImportError:
-        return None, f"Network {network} temporarily unavailable"
-    except ObjectDoesNotExist:
-        return None, f"Network {network} not supported"
-
-
-async def async_fetch_with_semaphore(semaphore, func, *args, **kwargs):
-    async with semaphore:
-        result = await asyncio.to_thread(func, *args, **kwargs)
-        await asyncio.sleep(0.5)
-        return result
 
 
 # Blockchain functions
