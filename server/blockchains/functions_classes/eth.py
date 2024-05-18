@@ -20,7 +20,7 @@ class Functions:
 
     def fetch_data_by_params(self, params, error_message):
         if params is None:
-            return None, None, 'Request params not provided'
+            return None, 'Request params not provided'
 
         params_encoded = urlencode(params)
         url = f'https://api.etherscan.io/api?{params_encoded}'
@@ -32,11 +32,11 @@ class Functions:
                 if 'result' in data:
                     return data['result'], None
                 else:
-                    return None, None, error_message
+                    return None, error_message
             else:
-                return None, None, f'Failed to fetch data from Etherscan API. Status code: {response.status_code}'
+                return None, f'Failed to fetch data from Etherscan API. Status code: {response.status_code}'
         except Exception as e:
-            return None, None, str(e)
+            return None, str(e)
 
 
     def fetch_token_balance_by_contract_adress(self, contract_address=None, wallet_address=None, params_instance=None):

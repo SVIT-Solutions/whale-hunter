@@ -59,6 +59,15 @@ class TokenPriceInfoType(graphene.ObjectType):
     percent_change_90d = graphene.Float()
 
 class TokenPriceType(graphene.ObjectType):
+    symbol = graphene.String()
+    price = graphene.Float()
+
+class TokenConvertedPricesType(graphene.ObjectType):
+    success = graphene.Boolean()
+    error = graphene.Field(ErrorType)
+    token_prices = graphene.List(TokenPriceType)
+
+class TokenConvertedPriceType(graphene.ObjectType):
     success = graphene.Boolean()
     error = graphene.Field(ErrorType)
     token_price = graphene.String()

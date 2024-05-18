@@ -21,8 +21,15 @@ class Query(graphene.ObjectType):
         block_explorer_api_key=graphene.String(required=False),
         description="Get wallet data"
     )
+    token_converted_prices = graphene.Field(
+        TokenConvertedPricesType,
+        token_symbols=graphene.List(graphene.String),
+        convert_symbol=graphene.String(default_value="USDT"),
+        coinmarketcap_api_key=graphene.String(required=False),
+        description="Get token converted Prices from Coinmarketcap API"
+    )
     token_converted_price = graphene.Field(
-        TokenPriceType, 
+        TokenConvertedPriceType, 
         token_symbol=graphene.String(required=True),
         convert_symbol=graphene.String(default_value="USDT"),
         coinmarketcap_api_key=graphene.String(required=False),
@@ -129,6 +136,44 @@ class Query(graphene.ObjectType):
         }
 
         return response_data
+
+
+    def resolve_token_converted_prices(self, info, token_symbols, convert_symbol, coinmarketcap_api_key=None):
+        success = False
+
+        if not token_symbols:
+            return create_error_response(message='Token symbols not provided', place='token_symbol')
+
+        if coinmarketcap_api_key is not None:
+            api_key = coinmarketcap_api_key
+        else:
+            # Check Authenticated
+            user = info.context.user
+            is_authenticated, authenticated_error = check_authenticated(user)
+            if not is_authenticated:
+                return create_error_response(message=authenticated_error, place="auth")
+
+            # Get Coinmarketcap API Key
+            api_key, api_key_error = get_api_key(user=user, key="coinmarketcap_api_key")
+
+        if not api_key:
+            return create_error_response(message=api_key_error, place="api_key")
+
+        requests_data = [{"token_symbol": symbol} for symbol in token_symbols]
+        token_prices_dict = asyncio.run(
+            async_multiple_fetch_data_with_queue(
+                fetch_token_converted_price_value, requests_data, "token_symbol", api_key=api_key, convert_symbol=convert_symbol
+            )
+        )
+        # cache_key_template = cache_keys["token_converted_price"]
+        # token_price = cached_fetch(cache_key_template, fetch_token_converted_price_value, 60, None, api_key=api_key, token_symbol=token_symbol, convert_symbol=convert_symbol)
+
+        if token_prices_dict is None:
+            return create_error_response(message='Could not find the token price', place='token_price')
+
+        token_prices = [{"symbol": key, "price": value} for key, value in token_prices_dict.items()]
+
+        return {'success': True, 'token_prices': token_prices}
 
 
     def resolve_token_converted_price(self, info, token_symbol, convert_symbol, coinmarketcap_api_key=None):

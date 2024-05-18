@@ -16,6 +16,7 @@ def fetch_token_converted_price_value(token_symbol=None, convert_symbol=None, ap
 
     try:
         response = requests.get(url, headers=headers)
+        data = response.json()
         if response.status_code == 200:
             data = response.json()
             if 'data' in data and 'quote' in data['data'] and 'USDT' in data['data']['quote']:

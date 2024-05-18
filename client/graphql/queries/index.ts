@@ -56,3 +56,23 @@ export const GET_TOKEN_CONVERTED_PRICE = gql`
     }
   }
 `;
+
+export const GET_TOKEN_CONVERTED_PRICES = gql`
+  query GetTokenConvertedPrices($tokenSymbols: [String]!, $convertSymbol: String, $coinmarketcapApiKey: String) {
+    tokenConvertedPrices(
+      tokenSymbols: $tokenSymbols
+      convertSymbol: $convertSymbol
+      coinmarketcapApiKey: $coinmarketcapApiKey
+    ) {
+      success
+      tokenPrices {
+        symbol
+        price
+      }
+      error {
+        message
+        place
+      }
+    }
+  }
+`;

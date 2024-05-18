@@ -86,7 +86,7 @@ async def async_multiple_fetch_data_with_queue(func, requests_data, response_key
     responses = await asyncio.gather(*tasks)
 
     for index, data in enumerate(requests_data):
-        contract_address = data['contract_address']
-        result_dict[contract_address] = responses[index]
+        result_dict_key = data[response_key]
+        result_dict[result_dict_key] = responses[index]
 
     return result_dict

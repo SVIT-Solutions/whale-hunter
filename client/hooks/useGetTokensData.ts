@@ -5,7 +5,7 @@ import client from '@/graphql/client';
 import { ITokenImages, ITokenPrices } from '@/types';
 import { TokenImagesEnum } from '@/constants/tokens';
 import { fetchWithRateLimit } from '@/utils';
-import { fetchTokenConvertedPrice, fetchTokenImage } from '@/services/TokenService';
+import { fetchTokenConvertedPrice, fetchTokenConvertedPrices, fetchTokenImage } from '@/services/TokenService';
 
 export const useGetTokensData = (coinmarketcapApiKey: string) => {
   const [isImagesLoading, setImagesLoading] = useState<boolean>(false);
@@ -76,18 +76,13 @@ export const useGetTokensData = (coinmarketcapApiKey: string) => {
     tokenSymbols = [...new Set(tokenSymbols)];
 
     try {
-      let results = await fetchWithRateLimit({
-        fetchFunction: fetchTokenConvertedPrice,
-        values: tokenSymbols,
-        valueKeyName: 'tokenSymbol',
-        mockVariables: { coinmarketcapApiKey },
-      });
+      const result = await fetchTokenConvertedPrices({ tokenSymbols, coinmarketcapApiKey });
 
-      results = results.filter((result) => result !== null);
+      result.filter((token) => token.price !== null);
 
-      const combinedResult = results.reduce((accumulator: ITokenPrices, currentObject) => {
-        const { token, price } = currentObject;
-        accumulator[token] = price;
+      const combinedResult = result.reduce((accumulator: ITokenPrices, currentObject) => {
+        const { symbol, price } = currentObject;
+        accumulator[symbol] = price;
         return accumulator;
       }, {});
 
