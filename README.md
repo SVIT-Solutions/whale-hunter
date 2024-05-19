@@ -1,6 +1,6 @@
 # Whale Hunter
 
-<img src="https://photos.app.goo.gl/GNyYZdujTjYZEjnKA" alt="Project main page"/>
+<img src="./project_assets/images/MainPage.jpeg" alt="Project main page"/>
 
 Whale Hunter is an application designed to analyze and search for wallets in blockchains that have a positive trading history or wallets that purchased tokens before their pump.
 
