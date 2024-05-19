@@ -165,8 +165,6 @@ class Query(graphene.ObjectType):
                 fetch_token_converted_price_value, requests_data, "token_symbol", api_key=api_key, convert_symbol=convert_symbol
             )
         )
-        # cache_key_template = cache_keys["token_converted_price"]
-        # token_price = cached_fetch(cache_key_template, fetch_token_converted_price_value, 60, None, api_key=api_key, token_symbol=token_symbol, convert_symbol=convert_symbol)
 
         if token_prices_dict is None:
             return create_error_response(message='Could not find the token price', place='token_price')
